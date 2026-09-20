@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { 
-  AlertOctagon, 
   Sparkles, 
   ShieldAlert, 
   CheckCircle2, 
   AlertTriangle, 
-  ArrowRight, 
   RotateCcw,
   PlusCircle,
   Save,
-  Info
+  HelpCircle,
+  Clock
 } from 'lucide-react';
 import { CheckerFormState, PredictionResult, LoanApplication } from '../types';
 import { predictLoanRisk } from '../services/dataService';
@@ -19,38 +18,48 @@ interface FraudCheckerViewProps {
   onNavigateToExplorer?: () => void;
 }
 
+const BLANK_FORM: CheckerFormState = {
+  applicantName: '',
+  applicantAge: '',
+  gender: '',
+  employmentStatus: '',
+  numberDependents: '',
+  loanType: '',
+  purposeOfLoan: '',
+  loanAmountRequested: '',
+  loanTenureMonths: '',
+  interestRateOffered: '',
+  monthlyIncome: '',
+  existingEMIs: '',
+  cibilScore: '',
+  propertyOwnership: '',
+  loanStatus: 'Under Review',
+};
+
 export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
   onSaveToQueue,
   onNavigateToExplorer,
 }) => {
-  const [formState, setFormState] = useState<CheckerFormState>({
-    applicantName: 'Devendra Joshi',
-    applicantAge: 23,
-    gender: 'Male',
-    employmentStatus: 'Self-Employed',
-    numberDependents: 1,
-    loanType: 'Personal',
-    purposeOfLoan: 'Personal Emergency Funding',
-    loanAmountRequested: 750000,
-    loanTenureMonths: 36,
-    interestRateOffered: 15.5,
-    monthlyIncome: 28000,
-    existingEMIs: 17000,
-    cibilScore: 520,
-    propertyOwnership: 'Rented',
-    loanStatus: 'Under Review',
-  });
-
-  const [result, setResult] = useState<PredictionResult>(() => predictLoanRisk(formState));
+  const [formState, setFormState] = useState<CheckerFormState>(BLANK_FORM);
+  const [result, setResult] = useState<PredictionResult | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   // Live computed DTI
-  const computedDTI = formState.monthlyIncome > 0 
-    ? Number((formState.existingEMIs / formState.monthlyIncome).toFixed(2)) 
-    : 0;
+  const monthlyInc = typeof formState.monthlyIncome === 'number' ? formState.monthlyIncome : 0;
+  const existingEMI = typeof formState.existingEMIs === 'number' ? formState.existingEMIs : 0;
+  const computedDTI = monthlyInc > 0 ? Number((existingEMI / monthlyInc).toFixed(2)) : 0;
+
+  const handleClearForm = () => {
+    setFormState(BLANK_FORM);
+    setResult(null);
+    setSaveSuccess(false);
+    setValidationError(null);
+  };
 
   const handleScenario = (type: 'safe' | 'risk' | 'borderline') => {
+    setValidationError(null);
     if (type === 'safe') {
       const safeData: CheckerFormState = {
         applicantName: 'Rashmi Pillai',
@@ -116,6 +125,15 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
 
   const handleAnalyze = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formState.applicantName.trim()) {
+      setValidationError('Please enter the applicant name.');
+      return;
+    }
+    if (!formState.loanAmountRequested) {
+      setValidationError('Please enter a requested loan amount.');
+      return;
+    }
+    setValidationError(null);
     setIsAnalyzing(true);
     setTimeout(() => {
       setResult(predictLoanRisk(formState));
@@ -124,17 +142,18 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
   };
 
   const handleSaveToQueue = () => {
+    if (!result) return;
     if (onSaveToQueue) {
       const newApp: LoanApplication = {
         ApplicationID: `APP${Math.floor(1000 + Math.random() * 9000)}`,
         CustomerID: `CUST${Math.floor(1000 + Math.random() * 9000)}`,
-        ApplicantName: formState.applicantName,
-        ApplicantAge: formState.applicantAge,
-        Gender: formState.gender,
-        EmploymentStatus: formState.employmentStatus,
-        NumberDependents: formState.numberDependents,
-        LoanType: formState.loanType,
-        PurposeOfLoan: formState.purposeOfLoan,
+        ApplicantName: formState.applicantName || 'Applicant',
+        ApplicantAge: typeof formState.applicantAge === 'number' ? formState.applicantAge : 30,
+        Gender: (formState.gender as any) || 'Other',
+        EmploymentStatus: (formState.employmentStatus as any) || 'Salaried',
+        NumberDependents: typeof formState.numberDependents === 'number' ? formState.numberDependents : 0,
+        LoanType: (formState.loanType as any) || 'Personal',
+        PurposeOfLoan: formState.purposeOfLoan || 'General Funding',
         ApplicationDate: '12-12-2024',
         DateKey: '20241212',
         Day: 12,
@@ -143,429 +162,490 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
         Year: 2024,
         FraudFlag: result.prediction === 'Fraud' ? 1 : 0,
         FraudType: result.prediction === 'Fraud' ? 'Synthetic Identity' : 'None',
-        LoanStatus: result.prediction === 'Fraud' ? 'Rejected' : result.prediction === 'Review' ? 'Under Review' : 'Approved',
-        PropertyOwnershipStatus: formState.propertyOwnership,
-        ResidentialAddress: 'Live Scored Application, Review Desk',
-        LoanAmountRequested: formState.loanAmountRequested,
-        LoanTenureMonths: formState.loanTenureMonths,
-        InterestRateOffered: formState.interestRateOffered,
-        MonthlyIncome: formState.monthlyIncome,
-        ExistingEMIs: formState.existingEMIs,
+        LoanStatus: result.prediction === 'Fraud' ? 'Rejected' : 'Approved',
+        PropertyOwnershipStatus: (formState.propertyOwnership as any) || 'Rented',
+        ResidentialAddress: 'Verification Pending',
+        LoanAmountRequested: typeof formState.loanAmountRequested === 'number' ? formState.loanAmountRequested : 500000,
+        LoanTenureMonths: typeof formState.loanTenureMonths === 'number' ? formState.loanTenureMonths : 36,
+        InterestRateOffered: typeof formState.interestRateOffered === 'number' ? formState.interestRateOffered : 12.0,
+        MonthlyIncome: typeof formState.monthlyIncome === 'number' ? formState.monthlyIncome : 50000,
+        ExistingEMIs: typeof formState.existingEMIs === 'number' ? formState.existingEMIs : 10000,
         DebtToIncomeRatio: computedDTI,
-        CIBILScore: formState.cibilScore,
-        RiskProbability: result.fraudProbability / 100,
+        CIBILScore: typeof formState.cibilScore === 'number' ? formState.cibilScore : 650,
+        RiskProbability: result.fraudProbability,
       };
+
       onSaveToQueue(newApp);
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 3000);
     }
   };
 
-  // Circumference for r=40 is 2 * PI * 40 = 251.3
-  const circumference = 251.3;
-  const strokeOffset = circumference - (result.fraudProbability / 100) * circumference;
+  const circumference = 251.2;
+  const strokeOffset = result ? circumference - (result.fraudProbability / 100) * circumference : circumference;
 
   return (
     <section className="flex flex-col gap-6">
-      {/* Header */}
-      <div>
-        <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-          Fraud Checker
-        </h2>
-        <p className="text-xs text-slate-400 mt-0.5">
-          Simulate real-time scoring inference for an individual loan applicant using trained ensemble parameters.
-        </p>
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+            Fraud Risk Checker
+          </h2>
+          <p className="text-[15px] sm:text-base text-slate-400 mt-1 leading-relaxed">
+            Real-time inference engine: enter customer profile parameters to generate instant risk probabilities and contributing factors.
+          </p>
+        </div>
+        
+        {/* Preset Scenarios + Clear Form */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[15px] text-slate-400 font-semibold mr-1">Preload Demo Profile:</span>
+          <button
+            type="button"
+            onClick={() => handleScenario('safe')}
+            className="px-3 py-2 rounded-xl bg-[#14181d] hover:bg-[#181d24] border border-[#bbf246]/30 text-sm font-semibold text-[#bbf246] transition-colors cursor-pointer"
+          >
+            Safe Prime
+          </button>
+          <button
+            type="button"
+            onClick={() => handleScenario('borderline')}
+            className="px-3 py-2 rounded-xl bg-[#14181d] hover:bg-[#181d24] border border-[#fb923c]/30 text-sm font-semibold text-[#fb923c] transition-colors cursor-pointer"
+          >
+            Borderline
+          </button>
+          <button
+            type="button"
+            onClick={() => handleScenario('risk')}
+            className="px-3 py-2 rounded-xl bg-[#14181d] hover:bg-[#181d24] border border-[#f43f5e]/30 text-sm font-semibold text-[#f43f5e] transition-colors cursor-pointer"
+          >
+            High Risk
+          </button>
+          <button
+            type="button"
+            onClick={handleClearForm}
+            className="px-3.5 py-2 rounded-xl bg-[#1d232c] hover:bg-[#252e3a] border border-white/10 text-sm font-semibold text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer ml-1"
+          >
+            <RotateCcw className="w-4 h-4" />
+            <span>Clear Form</span>
+          </button>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Side: Input Form (7 Cols) */}
-        <div className="lg:col-span-7 bg-[#14181d] rounded-2xl p-6 border border-white/10 flex flex-col justify-between">
-          <div>
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
+      {validationError && (
+        <div className="p-4 rounded-xl bg-[#2a1318] border border-[#f43f5e]/50 text-sm font-medium text-[#f43f5e] flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 shrink-0" />
+          <span>{validationError}</span>
+        </div>
+      )}
+
+      {/* Main Grid: Form (7 cols) + Decision Output (5 cols) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* Left Side: Loan Application Parameters Form */}
+        <div className="lg:col-span-7 bg-[#14181d] rounded-2xl p-6 border border-white/10">
+          <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
+            <div>
+              <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Application Parameters</h3>
+              <p className="text-[15px] text-slate-400 mt-0.5">Input demographic, income, and debt metrics</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleClearForm}
+              className="text-sm text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <RotateCcw className="w-4 h-4" />
+              <span>Reset</span>
+            </button>
+          </div>
+
+          <form onSubmit={handleAnalyze} className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              {/* 1. Applicant Name */}
               <div>
-                <h3 className="font-bold text-white text-base">Applicant Risk Scoring Simulator</h3>
-                <p className="text-xs text-slate-400">Fill parameters or select a pre-configured scenario profile</p>
+                <label className="block text-slate-300 mb-1.5 font-medium">Applicant Full Name *</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Rajesh Sharma"
+                  value={formState.applicantName}
+                  onChange={(e) => setFormState({ ...formState, applicantName: e.target.value })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none"
+                />
               </div>
 
-              {/* Quick Load Scenario Buttons */}
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleScenario('safe')}
-                  className="px-2.5 py-1 rounded-lg bg-[#bbf246]/15 text-[#bbf246] hover:bg-[#bbf246]/25 text-xs font-semibold transition-colors"
+              {/* 2. Applicant Age */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">Applicant Age (Years)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 32"
+                  min="18"
+                  max="80"
+                  value={formState.applicantAge}
+                  onChange={(e) => setFormState({ ...formState, applicantAge: e.target.value ? Number(e.target.value) : '' })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                />
+              </div>
+
+              {/* 3. Gender */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">Gender</label>
+                <select
+                  value={formState.gender}
+                  onChange={(e) => setFormState({ ...formState, gender: e.target.value as any })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none"
                 >
-                  + Safe Profile
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleScenario('risk')}
-                  className="px-2.5 py-1 rounded-lg bg-[#f43f5e]/15 text-[#f43f5e] hover:bg-[#f43f5e]/25 text-xs font-semibold transition-colors"
+                  <option value="">Select Gender</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              {/* 4. Employment Status */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">Employment Status</label>
+                <select
+                  value={formState.employmentStatus}
+                  onChange={(e) => setFormState({ ...formState, employmentStatus: e.target.value as any })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none"
                 >
-                  + High Risk Profile
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleScenario('borderline')}
-                  className="hidden sm:inline-block px-2.5 py-1 rounded-lg bg-[#fb923c]/15 text-[#fb923c] hover:bg-[#fb923c]/25 text-xs font-semibold transition-colors"
+                  <option value="">Select Employment Status</option>
+                  <option value="Salaried">Salaried</option>
+                  <option value="Self-Employed">Self-Employed</option>
+                  <option value="Small Business Owner">Small Business Owner</option>
+                  <option value="Freelance / Gig">Freelance / Gig</option>
+                  <option value="Retired">Retired</option>
+                </select>
+              </div>
+
+              {/* 5. Loan Type */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">Loan Type</label>
+                <select
+                  value={formState.loanType}
+                  onChange={(e) => setFormState({ ...formState, loanType: e.target.value as any })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none"
                 >
-                  + Borderline
-                </button>
+                  <option value="">Select Loan Type</option>
+                  <option value="Personal">Personal Loan</option>
+                  <option value="Home">Home Loan</option>
+                  <option value="Vehicle">Vehicle Loan</option>
+                  <option value="Business">Business Loan</option>
+                  <option value="Education">Education Loan</option>
+                </select>
+              </div>
+
+              {/* 6. Purpose of Loan */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">Purpose of Loan</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Home Renovation"
+                  value={formState.purposeOfLoan}
+                  onChange={(e) => setFormState({ ...formState, purposeOfLoan: e.target.value })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none"
+                />
+              </div>
+
+              {/* 7. Loan Amount Requested */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">Loan Amount Requested (₹) *</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 500000"
+                  step="10000"
+                  min="25000"
+                  value={formState.loanAmountRequested}
+                  onChange={(e) => setFormState({ ...formState, loanAmountRequested: e.target.value ? Number(e.target.value) : '' })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                />
+              </div>
+
+              {/* 8. Loan Tenure */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">Tenure (Months)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 36"
+                  min="6"
+                  max="360"
+                  value={formState.loanTenureMonths}
+                  onChange={(e) => setFormState({ ...formState, loanTenureMonths: e.target.value ? Number(e.target.value) : '' })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                />
+              </div>
+
+              {/* 9. Interest Rate Offered */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">Interest Rate Offered (% p.a.)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 11.5"
+                  step="0.1"
+                  min="5"
+                  max="36"
+                  value={formState.interestRateOffered}
+                  onChange={(e) => setFormState({ ...formState, interestRateOffered: e.target.value ? Number(e.target.value) : '' })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                />
+              </div>
+
+              {/* 10. Monthly Income */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">Monthly Verified Income (₹)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 60000"
+                  min="5000"
+                  value={formState.monthlyIncome}
+                  onChange={(e) => setFormState({ ...formState, monthlyIncome: e.target.value ? Number(e.target.value) : '' })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                />
+              </div>
+
+              {/* 11. Existing EMIs */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">Existing Monthly EMIs (₹)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 15000"
+                  min="0"
+                  value={formState.existingEMIs}
+                  onChange={(e) => setFormState({ ...formState, existingEMIs: e.target.value ? Number(e.target.value) : '' })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                />
+              </div>
+
+              {/* 12. Debt-to-Income Ratio (Auto) */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">
+                  Debt-to-Income (DTI) Ratio <span className="text-slate-500 font-normal">(Auto)</span>
+                </label>
+                <div className="w-full bg-[#181d24]/60 rounded-xl border border-white/10 text-slate-300 text-sm px-3.5 py-2.5 font-mono flex items-center justify-between">
+                  <span>{(computedDTI * 100).toFixed(1)}% ({computedDTI})</span>
+                  <span className={`text-xs font-bold ${computedDTI > 0.5 ? 'text-[#f43f5e]' : 'text-[#bbf246]'}`}>
+                    {computedDTI > 0.5 ? 'Critical DTI' : 'Healthy'}
+                  </span>
+                </div>
+              </div>
+
+              {/* 13. CIBIL Score */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">CIBIL Score (300 - 900)</label>
+                <input
+                  type="number"
+                  placeholder="e.g. 720"
+                  min="300"
+                  max="900"
+                  value={formState.cibilScore}
+                  onChange={(e) => setFormState({ ...formState, cibilScore: e.target.value ? Number(e.target.value) : '' })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                />
+              </div>
+
+              {/* 14. Property Ownership */}
+              <div>
+                <label className="block text-slate-300 mb-1.5 font-medium">Property Ownership</label>
+                <select
+                  value={formState.propertyOwnership}
+                  onChange={(e) => setFormState({ ...formState, propertyOwnership: e.target.value as any })}
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none"
+                >
+                  <option value="">Select Ownership</option>
+                  <option value="Owned">Owned</option>
+                  <option value="Rented">Rented</option>
+                  <option value="Mortgaged">Mortgaged</option>
+                </select>
               </div>
             </div>
 
-            <form onSubmit={handleAnalyze} className="space-y-4 text-xs">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {/* 1. Applicant Name */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Applicant Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={formState.applicantName}
-                    onChange={(e) => setFormState({ ...formState, applicantName: e.target.value })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none"
-                  />
-                </div>
-
-                {/* 2. Applicant Age */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Applicant Age (Years)</label>
-                  <input
-                    type="number"
-                    min="18"
-                    max="80"
-                    required
-                    value={formState.applicantAge}
-                    onChange={(e) => setFormState({ ...formState, applicantAge: Number(e.target.value) })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none"
-                  />
-                </div>
-
-                {/* 3. Gender */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Gender</label>
-                  <select
-                    value={formState.gender}
-                    onChange={(e) => setFormState({ ...formState, gender: e.target.value as any })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none"
-                  >
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                {/* 4. Employment Status */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Employment Status</label>
-                  <select
-                    value={formState.employmentStatus}
-                    onChange={(e) => setFormState({ ...formState, employmentStatus: e.target.value as any })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none"
-                  >
-                    <option value="Self-Employed">Self-Employed</option>
-                    <option value="Freelance / Gig">Freelance / Gig</option>
-                    <option value="Salaried">Salaried Corporate</option>
-                    <option value="Small Business Owner">Small Business Owner</option>
-                  </select>
-                </div>
-
-                {/* 5. Number of Dependents */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Number of Dependents</label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    required
-                    value={formState.numberDependents}
-                    onChange={(e) => setFormState({ ...formState, numberDependents: Number(e.target.value) })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none"
-                  />
-                </div>
-
-                {/* 6. Loan Type */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Loan Type</label>
-                  <select
-                    value={formState.loanType}
-                    onChange={(e) => setFormState({ ...formState, loanType: e.target.value as any })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none"
-                  >
-                    <option value="Personal">Personal Loan</option>
-                    <option value="Vehicle">Vehicle Financing</option>
-                    <option value="Business">Small Business Loan</option>
-                    <option value="Home">Home Loan</option>
-                  </select>
-                </div>
-
-                {/* 7. Loan Amount Requested */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Loan Amount Requested (₹)</label>
-                  <input
-                    type="number"
-                    min="10000"
-                    required
-                    value={formState.loanAmountRequested}
-                    onChange={(e) => setFormState({ ...formState, loanAmountRequested: Number(e.target.value) })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
-                  />
-                </div>
-
-                {/* 8. Loan Tenure (Months) */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Loan Tenure (Months)</label>
-                  <input
-                    type="number"
-                    min="6"
-                    max="360"
-                    required
-                    value={formState.loanTenureMonths}
-                    onChange={(e) => setFormState({ ...formState, loanTenureMonths: Number(e.target.value) })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none"
-                  />
-                </div>
-
-                {/* 9. Interest Rate Offered */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Interest Rate Offered (%)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    min="5"
-                    max="35"
-                    required
-                    value={formState.interestRateOffered}
-                    onChange={(e) => setFormState({ ...formState, interestRateOffered: Number(e.target.value) })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none"
-                  />
-                </div>
-
-                {/* 10. Monthly Income */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Stated Monthly Income (₹)</label>
-                  <input
-                    type="number"
-                    min="5000"
-                    required
-                    value={formState.monthlyIncome}
-                    onChange={(e) => setFormState({ ...formState, monthlyIncome: Number(e.target.value) })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
-                  />
-                </div>
-
-                {/* 11. Existing EMIs */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Existing Monthly EMIs (₹)</label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={formState.existingEMIs}
-                    onChange={(e) => setFormState({ ...formState, existingEMIs: Number(e.target.value) })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
-                  />
-                </div>
-
-                {/* 12. Debt-to-Income Ratio (Auto calculated) */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">
-                    Debt-to-Income (DTI) Ratio <span className="text-slate-500 font-normal">(Auto)</span>
-                  </label>
-                  <div className="w-full bg-[#181d24]/60 rounded-xl border border-white/10 text-slate-300 text-xs px-3 py-2.5 font-mono flex items-center justify-between">
-                    <span>{(computedDTI * 100).toFixed(1)}% ({computedDTI})</span>
-                    <span className={`text-[10px] font-bold ${computedDTI > 0.5 ? 'text-[#f43f5e]' : 'text-[#bbf246]'}`}>
-                      {computedDTI > 0.5 ? 'Critical' : 'Healthy'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* 13. CIBIL Score */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">CIBIL Score (300 - 900)</label>
-                  <input
-                    type="number"
-                    min="300"
-                    max="900"
-                    required
-                    value={formState.cibilScore}
-                    onChange={(e) => setFormState({ ...formState, cibilScore: Number(e.target.value) })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
-                  />
-                </div>
-
-                {/* 14. Property Ownership */}
-                <div>
-                  <label className="block text-slate-400 mb-1 font-medium">Property Ownership</label>
-                  <select
-                    value={formState.propertyOwnership}
-                    onChange={(e) => setFormState({ ...formState, propertyOwnership: e.target.value as any })}
-                    className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-xs px-3 py-2.5 focus:border-[#bbf246] focus:outline-none"
-                  >
-                    <option value="Owned">Owned</option>
-                    <option value="Rented">Rented</option>
-                    <option value="Mortgaged">Mortgaged</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="pt-4 flex items-center gap-3">
-                <button
-                  type="submit"
-                  disabled={isAnalyzing}
-                  className="flex-1 bg-[#bbf246] text-[#0a0c0e] font-bold py-3 px-4 rounded-xl hover:bg-[#a3e635] transition-all text-xs flex items-center justify-center gap-2 shadow-[0_0_20px_-3px_rgba(187,242,70,0.35)] disabled:opacity-50"
-                >
-                  <Sparkles className="w-4 h-4" />
-                  <span>{isAnalyzing ? 'Analyzing Application Parameters...' : 'Analyze Application'}</span>
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <div className="mt-6 pt-4 border-t border-white/10 text-[11px] text-slate-500 flex items-center justify-between font-mono">
-            <span>POST /api/v1/predict-fraud</span>
-            <span className="text-[#bbf246]">Inference Hook Ready</span>
-          </div>
+            {/* Form Submit & Clear Action Buttons */}
+            <div className="pt-4 flex items-center gap-3">
+              <button
+                type="submit"
+                disabled={isAnalyzing}
+                className="flex-1 bg-[#bbf246] text-[#0a0c0e] font-bold py-3 px-4 rounded-xl hover:bg-[#a3e635] transition-all text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_-3px_rgba(187,242,70,0.35)] disabled:opacity-50 cursor-pointer"
+              >
+                <Sparkles className="w-4 h-4" />
+                <span>{isAnalyzing ? 'Analyzing Application Parameters...' : 'Analyze Application'}</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleClearForm}
+                className="py-3 px-4 rounded-xl bg-[#181d24] hover:bg-[#202732] border border-white/10 text-slate-300 hover:text-white font-medium text-sm transition-colors cursor-pointer"
+              >
+                Clear
+              </button>
+            </div>
+          </form>
         </div>
 
-        {/* Right Side: Decision Result Card (5 Cols) */}
+        {/* Right Side: Prediction Verdict Card or Empty State */}
         <div className="lg:col-span-5 flex flex-col gap-4">
-          <div
-            className={`bg-[#14181d] rounded-2xl p-6 border relative overflow-hidden flex flex-col justify-between h-full transition-all ${
-              result.riskLevel === 'HIGH RISK'
-                ? 'border-[#f43f5e]/40 shadow-[0_0_20px_-3px_rgba(244,63,94,0.15)]'
-                : result.riskLevel === 'MEDIUM RISK'
-                ? 'border-[#fb923c]/40'
-                : 'border-[#bbf246]/40 shadow-[0_0_20px_-3px_rgba(187,242,70,0.15)]'
-            }`}
-          >
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-xs uppercase tracking-wider font-bold text-slate-400">
-                  ML Evaluation Verdict
-                </span>
-                <span
-                  className={`px-2.5 py-1 rounded-full text-xs font-extrabold tracking-wide ${
-                    result.riskLevel === 'HIGH RISK'
-                      ? 'bg-[#f43f5e]/20 text-[#f43f5e]'
-                      : result.riskLevel === 'MEDIUM RISK'
-                      ? 'bg-[#fb923c]/20 text-[#fb923c]'
-                      : 'bg-[#bbf246]/20 text-[#bbf246]'
-                  }`}
-                >
-                  {result.riskLevel}
-                </span>
+          {!result ? (
+            /* Empty State: Awaiting Application Data */
+            <div className="bg-[#14181d] rounded-2xl p-8 border border-white/10 flex flex-col items-center justify-center text-center min-h-[460px]">
+              <div className="w-16 h-16 rounded-2xl bg-[#181d24] border border-white/10 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                <ShieldAlert className="w-8 h-8 text-[#bbf246]/60" />
               </div>
-
-              {/* Radial Risk Meter */}
-              <div className="flex flex-col items-center justify-center my-4">
-                <div className="relative w-40 h-40 flex items-center justify-center">
-                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" fill="none" r="40" stroke="#1d242e" strokeWidth="10" />
-                    <circle
-                      cx="50"
-                      cy="50"
-                      fill="none"
-                      r="40"
-                      stroke={
-                        result.riskLevel === 'HIGH RISK'
-                          ? '#f43f5e'
-                          : result.riskLevel === 'MEDIUM RISK'
-                          ? '#fb923c'
-                          : '#bbf246'
-                      }
-                      strokeDasharray={circumference}
-                      strokeDashoffset={strokeOffset}
-                      strokeLinecap="round"
-                      strokeWidth="10"
-                      className="gauge-circle"
-                    />
-                  </svg>
-                  <div className="absolute text-center">
-                    <span
-                      className={`text-3xl font-black tracking-tight ${
-                        result.riskLevel === 'HIGH RISK'
-                          ? 'text-[#f43f5e]'
-                          : result.riskLevel === 'MEDIUM RISK'
-                          ? 'text-[#fb923c]'
-                          : 'text-[#bbf246]'
-                      }`}
-                    >
-                      {result.fraudProbability}%
-                    </span>
-                    <span className="block text-[10px] text-slate-400 font-bold uppercase">
-                      Fraud Probability
-                    </span>
-                  </div>
+              <h3 className="text-lg font-bold text-white mb-2">Awaiting Application Data</h3>
+              <p className="text-sm text-slate-400 max-w-xs leading-relaxed mb-6">
+                Fill in the applicant details on the left, or select a preset demo profile above, then click <strong className="text-white font-semibold">"Analyze Application"</strong> to compute real-time risk scores.
+              </p>
+              <div className="flex flex-col gap-2 w-full max-w-xs text-xs text-slate-400 font-mono">
+                <div className="p-2.5 rounded-xl bg-[#181d24] border border-white/5 flex items-center justify-between">
+                  <span>Random Forest Engine:</span>
+                  <span className="text-[#bbf246]">Ready</span>
                 </div>
-
-                <div className="mt-2 text-center">
-                  <div className="text-xs font-bold text-white mb-1">
-                    Prediction: {result.prediction}
-                  </div>
-                  <p className="text-xs text-slate-300 max-w-xs leading-relaxed">
-                    {result.recommendation}
-                  </p>
+                <div className="p-2.5 rounded-xl bg-[#181d24] border border-white/5 flex items-center justify-between">
+                  <span>XGBoost Gradient Tree:</span>
+                  <span className="text-[#bbf246]">Ready</span>
                 </div>
               </div>
             </div>
+          ) : (
+            /* Verdict Displayed */
+            <div
+              className={`bg-[#14181d] rounded-2xl p-6 border relative overflow-hidden flex flex-col justify-between h-full transition-all ${
+                result.riskLevel === 'HIGH RISK'
+                  ? 'border-[#f43f5e]/40 shadow-[0_0_20px_-3px_rgba(244,63,94,0.15)]'
+                  : result.riskLevel === 'MEDIUM RISK'
+                  ? 'border-[#fb923c]/40'
+                  : 'border-[#bbf246]/40 shadow-[0_0_20px_-3px_rgba(187,242,70,0.15)]'
+              }`}
+            >
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-xs uppercase tracking-wider font-bold text-slate-400">
+                    ML Evaluation Verdict
+                  </span>
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-extrabold tracking-wide ${
+                      result.riskLevel === 'HIGH RISK'
+                        ? 'bg-[#f43f5e]/20 text-[#f43f5e]'
+                        : result.riskLevel === 'MEDIUM RISK'
+                        ? 'bg-[#fb923c]/20 text-[#fb923c]'
+                        : 'bg-[#bbf246]/20 text-[#bbf246]'
+                    }`}
+                  >
+                    {result.riskLevel}
+                  </span>
+                </div>
 
-            {/* Contributing Risk Factors Breakdown */}
-            <div className="space-y-3 pt-4 border-t border-white/10">
-              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
-                Top Contributing Factors
-              </div>
-              <div className="space-y-2 text-xs">
-                {result.contributingFactors.map((f, idx) => (
-                  <div key={idx}>
-                    <div className="flex justify-between text-[11px] mb-1">
-                      <span className="text-slate-300">{f.factor}</span>
+                {/* Radial Gauge Meter */}
+                <div className="flex flex-col items-center justify-center my-4">
+                  <div className="relative w-44 h-44 flex items-center justify-center">
+                    <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                      <circle cx="50" cy="50" fill="none" r="40" stroke="#1d242e" strokeWidth="10" />
+                      <circle
+                        cx="50"
+                        cy="50"
+                        fill="none"
+                        r="40"
+                        stroke={
+                          result.riskLevel === 'HIGH RISK'
+                            ? '#f43f5e'
+                            : result.riskLevel === 'MEDIUM RISK'
+                            ? '#fb923c'
+                            : '#bbf246'
+                        }
+                        strokeDasharray={circumference}
+                        strokeDashoffset={strokeOffset}
+                        strokeLinecap="round"
+                        strokeWidth="10"
+                        className="transition-all duration-700 ease-out"
+                      />
+                    </svg>
+                    <div className="absolute text-center">
                       <span
-                        className={`font-bold font-mono ${
-                          f.severity === 'coral'
+                        className={`text-4xl font-black tracking-tight font-mono ${
+                          result.riskLevel === 'HIGH RISK'
                             ? 'text-[#f43f5e]'
-                            : f.severity === 'amber'
+                            : result.riskLevel === 'MEDIUM RISK'
                             ? 'text-[#fb923c]'
                             : 'text-[#bbf246]'
                         }`}
                       >
-                        {f.impact}
+                        {result.fraudProbability}%
+                      </span>
+                      <span className="block text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                        Fraud Risk
                       </span>
                     </div>
-                    <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                      <div
-                        className={`h-full rounded-full ${
-                          f.severity === 'coral'
-                            ? 'bg-[#f43f5e]'
-                            : f.severity === 'amber'
-                            ? 'bg-[#fb923c]'
-                            : 'bg-[#bbf246]'
-                        }`}
-                        style={{ width: `${f.percentage}%` }}
-                      />
-                    </div>
                   </div>
-                ))}
+
+                  <div className="mt-3 text-center">
+                    <div className="text-base font-bold text-white mb-1">
+                      Classification: {result.prediction}
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-300 max-w-sm leading-relaxed">
+                      {result.recommendation}
+                    </p>
+                  </div>
+                </div>
               </div>
 
-              <div className="pt-2 text-[10px] text-slate-500 italic">
-                * Demonstration result — not a lending decision.
+              {/* Contributing Factors Breakdown */}
+              <div className="space-y-3 pt-4 border-t border-white/10">
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                  Top Contributing Risk Drivers
+                </div>
+                <div className="space-y-2 text-xs">
+                  {result.contributingFactors.map((f, idx) => (
+                    <div key={idx} className="p-3 rounded-xl bg-[#181d24] border border-white/5">
+                      <div className="flex items-center justify-between mb-1.5 font-medium">
+                        <span className="text-slate-200">{f.factor}</span>
+                        <span
+                          className={`font-mono text-xs font-bold ${
+                            f.severity === 'coral'
+                              ? 'text-[#f43f5e]'
+                              : f.severity === 'amber'
+                              ? 'text-[#fb923c]'
+                              : 'text-[#bbf246]'
+                          }`}
+                        >
+                          {f.impact}
+                        </span>
+                      </div>
+                      <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full ${
+                            f.severity === 'coral'
+                              ? 'bg-[#f43f5e]'
+                              : f.severity === 'amber'
+                              ? 'bg-[#fb923c]'
+                              : 'bg-[#bbf246]'
+                          }`}
+                          style={{ width: `${f.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Save to Queue Action */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveToQueue}
+                    className="w-full py-2.5 px-4 rounded-xl bg-[#1d232c] hover:bg-[#252e3a] border border-white/10 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                  >
+                    {saveSuccess ? (
+                      <>
+                        <CheckCircle2 className="w-4 h-4 text-[#bbf246]" />
+                        <span className="text-[#bbf246]">Saved to Active Portfolio!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4 text-slate-400" />
+                        <span>Save Application to Review Queue</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
-
-            <div className="mt-4 pt-3 border-t border-white/10 flex items-center justify-between text-[11px]">
-              <span className="text-slate-500 font-mono">Latency: 12ms</span>
-              <button
-                type="button"
-                onClick={handleSaveToQueue}
-                className="text-[#bbf246] hover:underline font-semibold flex items-center gap-1"
-              >
-                <Save className="w-3.5 h-3.5" />
-                <span>{saveSuccess ? 'Saved to Explorer!' : 'Save to Review Queue'}</span>
-              </button>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </section>

@@ -138,9 +138,13 @@ export function calculateDashboardMetrics(data: LoanApplication[]): KPIMetrics {
       fraudulentApplications: 0,
       fraudRate: 0,
       avgLoanAmount: 0,
+      avgLoanAmountRupees: 0,
       avgGenuineAmount: 0,
       avgFraudAmount: 0,
       estFraudPreventedCr: 0,
+      avgCibilScore: 0,
+      avgMonthlyIncome: 0,
+      avgDtiRatio: 0,
     };
   }
 
@@ -152,16 +156,17 @@ export function calculateDashboardMetrics(data: LoanApplication[]): KPIMetrics {
   const genuineApplications = genuineApps.length;
   const fraudRate = Number(((fraudulentApplications / totalApplications) * 100).toFixed(2));
 
-  // Average Loan Amount in Lakhs (divide amount by 100,000)
-  const totalAmount = data.reduce((sum, row) => sum + row.LoanAmountRequested, 0);
+  // Average Loan Amount in Lakhs & Rupees
+  const totalAmount = data.reduce((sum, row) => sum + (Number(row.LoanAmountRequested) || 0), 0);
   const avgLoanAmount = Number((totalAmount / (totalApplications * 100000)).toFixed(2));
+  const avgLoanAmountRupees = Math.round(totalAmount / totalApplications);
 
-  const totalGenuineAmt = genuineApps.reduce((sum, row) => sum + row.LoanAmountRequested, 0);
+  const totalGenuineAmt = genuineApps.reduce((sum, row) => sum + (Number(row.LoanAmountRequested) || 0), 0);
   const avgGenuineAmount = genuineApps.length > 0
     ? Number((totalGenuineAmt / (genuineApps.length * 100000)).toFixed(2))
     : 0;
 
-  const totalFraudAmt = fraudApps.reduce((sum, row) => sum + row.LoanAmountRequested, 0);
+  const totalFraudAmt = fraudApps.reduce((sum, row) => sum + (Number(row.LoanAmountRequested) || 0), 0);
   const avgFraudAmount = fraudApps.length > 0
     ? Number((totalFraudAmt / (fraudApps.length * 100000)).toFixed(2))
     : 0;
@@ -169,15 +174,31 @@ export function calculateDashboardMetrics(data: LoanApplication[]): KPIMetrics {
   // Estimated Fraud Prevented in Crores (divide rupees by 10,000,000)
   const estFraudPreventedCr = Number((totalFraudAmt / 10000000).toFixed(2));
 
+  // 1. Average CIBIL Score (Empirical calculation)
+  const totalCibil = data.reduce((sum, row) => sum + (Number(row.CIBILScore) || 0), 0);
+  const avgCibilScore = Math.round(totalCibil / totalApplications);
+
+  // 2. Average Monthly Income (Empirical calculation)
+  const totalIncome = data.reduce((sum, row) => sum + (Number(row.MonthlyIncome) || 0), 0);
+  const avgMonthlyIncome = Math.round(totalIncome / totalApplications);
+
+  // 3. Average Debt-to-Income Ratio (Empirical calculation)
+  const totalDti = data.reduce((sum, row) => sum + (Number(row.DebtToIncomeRatio) || 0), 0);
+  const avgDtiRatio = Number((totalDti / totalApplications).toFixed(1));
+
   return {
     totalApplications,
     genuineApplications,
     fraudulentApplications,
     fraudRate,
     avgLoanAmount,
+    avgLoanAmountRupees,
     avgGenuineAmount,
     avgFraudAmount,
     estFraudPreventedCr,
+    avgCibilScore,
+    avgMonthlyIncome,
+    avgDtiRatio,
   };
 }
 
@@ -326,4 +347,140 @@ export function getMonthlyIntakeTrend(data: LoanApplication[]) {
     peakMonth: peak,
     lowestMonth: lowest,
   };
+}
+
+const MONTH_INDEX_MAP: Record<string, number> = {
+  january: 0, jan: 0,
+  february: 1, feb: 1,
+  march: 2, mar: 2,
+  april: 3, apr: 3,
+  may: 4,
+  june: 5, jun: 5,
+  july: 6, jul: 6,
+  august: 7, aug: 7,
+  september: 8, sep: 8, sept: 8,
+  october: 9, oct: 9,
+  november: 10, nov: 10,
+  december: 11, dec: 11,
+};
+
+/**
+ * Filters loan applications strictly using the dataset's actual dates, months, years, and quarters.
+ * Never relies solely on today's system clock.
+ */
+export function filterApplicationsByPeriod(applications: LoanApplication[], period: string): LoanApplication[] {
+  if (!applications || applications.length === 0) return [];
+  if (!period || period === 'all' || period === 'All Time') return applications;
+
+  const years = applications.map((a) => a.Year).filter((y) => typeof y === 'number' && y > 1900);
+  const maxYear = years.length > 0 ? Math.max(...years) : 2024;
+
+  const getAppMonthIndex = (app: LoanApplication): number => {
+    if (app.Month) {
+      const idx = MONTH_INDEX_MAP[app.Month.toLowerCase().trim()];
+      if (idx !== undefined) return idx;
+    }
+    if (app.DateKey && String(app.DateKey).length >= 6) {
+      const mStr = String(app.DateKey).substring(4, 6);
+      const mNum = parseInt(mStr, 10);
+      if (!isNaN(mNum) && mNum >= 1 && mNum <= 12) return mNum - 1;
+    }
+    return 0;
+  };
+
+  const maxYearApps = applications.filter((a) => a.Year === maxYear);
+  const targetApps = maxYearApps.length > 0 ? maxYearApps : applications;
+  const monthIndices = targetApps.map(getAppMonthIndex);
+  const maxMonthIndex = monthIndices.length > 0 ? Math.max(...monthIndices) : 11;
+
+  const cleanPeriod = period.toLowerCase().trim();
+
+  switch (cleanPeriod) {
+    case 'latest-month':
+    case 'latest month': {
+      const filtered = applications.filter((app) => {
+        const y = app.Year || maxYear;
+        const m = getAppMonthIndex(app);
+        return y === maxYear && m === maxMonthIndex;
+      });
+      return filtered.length > 0 ? filtered : applications;
+    }
+
+    case 'last-3-months':
+    case 'last 3 months': {
+      const maxAbsoluteMonth = maxYear * 12 + maxMonthIndex;
+      const filtered = applications.filter((app) => {
+        const y = app.Year || maxYear;
+        const m = getAppMonthIndex(app);
+        const appAbsoluteMonth = y * 12 + m;
+        return appAbsoluteMonth <= maxAbsoluteMonth && appAbsoluteMonth > maxAbsoluteMonth - 3;
+      });
+      return filtered.length > 0 ? filtered : applications;
+    }
+
+    case 'last-6-months':
+    case 'last 6 months': {
+      const maxAbsoluteMonth = maxYear * 12 + maxMonthIndex;
+      const filtered = applications.filter((app) => {
+        const y = app.Year || maxYear;
+        const m = getAppMonthIndex(app);
+        const appAbsoluteMonth = y * 12 + m;
+        return appAbsoluteMonth <= maxAbsoluteMonth && appAbsoluteMonth > maxAbsoluteMonth - 6;
+      });
+      return filtered.length > 0 ? filtered : applications;
+    }
+
+    case 'this-year':
+    case 'this year': {
+      const filtered = applications.filter((app) => (app.Year || maxYear) === maxYear);
+      return filtered.length > 0 ? filtered : applications;
+    }
+
+    case 'q1':
+    case 'quarter 1': {
+      const filtered = applications.filter((app) => {
+        const y = app.Year || maxYear;
+        const m = getAppMonthIndex(app);
+        const q = app.Quarter ? app.Quarter.toUpperCase() : '';
+        return y === maxYear && (q === 'Q1' || (m >= 0 && m <= 2));
+      });
+      return filtered.length > 0 ? filtered : applications;
+    }
+
+    case 'q2':
+    case 'quarter 2': {
+      const filtered = applications.filter((app) => {
+        const y = app.Year || maxYear;
+        const m = getAppMonthIndex(app);
+        const q = app.Quarter ? app.Quarter.toUpperCase() : '';
+        return y === maxYear && (q === 'Q2' || (m >= 3 && m <= 5));
+      });
+      return filtered.length > 0 ? filtered : applications;
+    }
+
+    case 'q3':
+    case 'quarter 3': {
+      const filtered = applications.filter((app) => {
+        const y = app.Year || maxYear;
+        const m = getAppMonthIndex(app);
+        const q = app.Quarter ? app.Quarter.toUpperCase() : '';
+        return y === maxYear && (q === 'Q3' || (m >= 6 && m <= 8));
+      });
+      return filtered.length > 0 ? filtered : applications;
+    }
+
+    case 'q4':
+    case 'quarter 4': {
+      const filtered = applications.filter((app) => {
+        const y = app.Year || maxYear;
+        const m = getAppMonthIndex(app);
+        const q = app.Quarter ? app.Quarter.toUpperCase() : '';
+        return y === maxYear && (q === 'Q4' || (m >= 9 && m <= 11));
+      });
+      return filtered.length > 0 ? filtered : applications;
+    }
+
+    default:
+      return applications;
+  }
 }

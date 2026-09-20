@@ -20,21 +20,25 @@ export const DEFAULT_CONFIG: DataSourceConfig = {
 };
 
 export const DEFAULT_KPIS: KPIMetrics = {
-  totalApplications: 5000,
-  genuineApplications: 4514,
-  fraudulentApplications: 486,
-  fraudRate: 9.72,
-  avgLoanAmount: 4.82,
-  avgGenuineAmount: 4.60,
-  avgFraudAmount: 6.80,
-  estFraudPreventedCr: 3.30,
+  totalApplications: 0,
+  genuineApplications: 0,
+  fraudulentApplications: 0,
+  fraudRate: 0,
+  avgLoanAmount: 0,
+  avgLoanAmountRupees: 0,
+  avgGenuineAmount: 0,
+  avgFraudAmount: 0,
+  estFraudPreventedCr: 0,
+  avgCibilScore: 0,
+  avgMonthlyIncome: 0,
+  avgDtiRatio: 0,
 };
 
 export const MODELS_DATA: Record<string, ModelMetric> = {
   rf: {
     id: 'rf',
     name: 'Random Forest',
-    badge: 'Active Champion',
+    badge: 'Tree Ensemble',
     accuracy: 94.8,
     precision: 92.4,
     recall: 85.6,
@@ -668,58 +672,69 @@ export const FRAUD_ALERTS: FraudAlert[] = [
   },
 ];
 
-export const PIPELINE_ACTIVITIES: PipelineActivity[] = [
-  {
-    id: 'act-1',
-    title: '5,000 records loaded & validated',
-    subtitle: 'Google Sheet schema mapping verified (25 features)',
-    timestamp: '2 mins ago',
-    status: 'completed',
-  },
-  {
-    id: 'act-2',
-    title: 'Data cleaning completed',
-    subtitle: 'Median income imputation and Standard Scaler applied',
-    timestamp: '14 mins ago',
-    status: 'completed',
-  },
-  {
-    id: 'act-3',
-    title: 'Model evaluation completed',
-    subtitle: 'Random Forest & XGBoost achieved 0.96 ROC-AUC',
-    timestamp: '1 hour ago',
-    status: 'completed',
-  },
-  {
-    id: 'act-4',
-    title: 'Dataset synchronized',
-    subtitle: 'Zero latency webhook connected to SheetDB API',
-    timestamp: '2 hours ago',
-    status: 'completed',
-  },
-  {
-    id: 'act-5',
-    title: 'New high-risk pattern detected',
-    subtitle: 'DTI > 0.60 & CIBIL < 550 flagged 4.8x fraud likelihood',
-    timestamp: '3 hours ago',
-    status: 'active',
-  },
-];
+export function getPipelineActivities(recordCount: number = 0, lastSyncTime: string = 'Just now'): PipelineActivity[] {
+  const countStr = recordCount > 0 ? `${recordCount.toLocaleString()} records` : 'Dataset';
+  return [
+    {
+      id: 'act-1',
+      title: `${countStr} loaded & validated`,
+      subtitle: 'Google Sheet schema mapping verified (25 features)',
+      timestamp: lastSyncTime,
+      status: 'completed',
+    },
+    {
+      id: 'act-2',
+      title: 'Data cleaning completed',
+      subtitle: 'Median income imputation and Standard Scaler applied',
+      timestamp: '14 mins ago',
+      status: 'completed',
+    },
+    {
+      id: 'act-3',
+      title: 'Model evaluation completed',
+      subtitle: 'Random Forest & XGBoost achieved 0.96 ROC-AUC',
+      timestamp: '1 hour ago',
+      status: 'completed',
+    },
+    {
+      id: 'act-4',
+      title: 'Dataset synchronized',
+      subtitle: 'Zero latency webhook connected to SheetDB API',
+      timestamp: '2 hours ago',
+      status: 'completed',
+    },
+    {
+      id: 'act-5',
+      title: 'New high-risk pattern detected',
+      subtitle: 'DTI > 0.60 & CIBIL < 550 flagged elevated fraud likelihood',
+      timestamp: '3 hours ago',
+      status: 'active',
+    },
+  ];
+}
+
+export const PIPELINE_ACTIVITIES: PipelineActivity[] = getPipelineActivities(0);
 
 /**
  * Predict risk for a single loan application using tree-based heuristic weights
  */
 export function predictLoanRisk(form: CheckerFormState): PredictionResult {
-  const dti = form.monthlyIncome > 0 ? Number((form.existingEMIs / form.monthlyIncome).toFixed(2)) : 1.0;
-  const loanToIncomeRatio = form.monthlyIncome > 0 ? (form.loanAmountRequested / (form.monthlyIncome * 12)) : 5.0;
+  const monthlyIncome = typeof form.monthlyIncome === 'number' ? form.monthlyIncome : 0;
+  const existingEMIs = typeof form.existingEMIs === 'number' ? form.existingEMIs : 0;
+  const loanAmount = typeof form.loanAmountRequested === 'number' ? form.loanAmountRequested : 0;
+  const cibil = typeof form.cibilScore === 'number' ? form.cibilScore : 650;
+  const age = typeof form.applicantAge === 'number' ? form.applicantAge : 30;
+
+  const dti = monthlyIncome > 0 ? Number((existingEMIs / monthlyIncome).toFixed(2)) : 0.35;
+  const loanToIncomeRatio = monthlyIncome > 0 ? (loanAmount / (monthlyIncome * 12)) : 2.5;
 
   // Baseline 15%
   let score = 15;
 
   // CIBIL factor
-  if (form.cibilScore < 550) score += 36;
-  else if (form.cibilScore < 640) score += 20;
-  else if (form.cibilScore > 750) score -= 14;
+  if (cibil < 550) score += 36;
+  else if (cibil < 640) score += 20;
+  else if (cibil > 750) score -= 14;
 
   // DTI factor
   if (dti > 0.55) score += 26;
@@ -731,7 +746,7 @@ export function predictLoanRisk(form: CheckerFormState): PredictionResult {
   else if (loanToIncomeRatio > 1.8) score += 8;
 
   // Age & Employment
-  if (form.applicantAge < 25) score += 8;
+  if (age < 25) score += 8;
   if (form.employmentStatus === 'Self-Employed' || form.employmentStatus === 'Freelance / Gig') score += 7;
   if (form.loanType === 'Personal') score += 6;
 
@@ -756,12 +771,15 @@ export function predictLoanRisk(form: CheckerFormState): PredictionResult {
     recommendation = 'Credit profile indicates genuine applicant with robust debt servicing capacity and prime credit tier.';
   }
 
+  const empLabel = form.employmentStatus || 'General Profile';
+  const loanLabel = form.loanType || 'General';
+
   const contributingFactors = [
     {
-      factor: `CIBIL Score (${form.cibilScore})`,
-      impact: form.cibilScore < 600 ? '+35% Risk' : '-14% Risk',
-      percentage: Math.min(100, Math.max(15, Math.round(((900 - form.cibilScore) / 4)))),
-      severity: form.cibilScore < 600 ? ('coral' as const) : ('lime' as const),
+      factor: `CIBIL Score (${cibil})`,
+      impact: cibil < 600 ? '+35% Risk' : '-14% Risk',
+      percentage: Math.min(100, Math.max(15, Math.round(((900 - cibil) / 4)))),
+      severity: cibil < 600 ? ('coral' as const) : ('lime' as const),
     },
     {
       factor: `Debt-to-Income (${(dti * 100).toFixed(0)}%)`,
@@ -770,7 +788,7 @@ export function predictLoanRisk(form: CheckerFormState): PredictionResult {
       severity: dti > 0.45 ? ('coral' as const) : ('lime' as const),
     },
     {
-      factor: `${form.employmentStatus} + ${form.loanType} Loan`,
+      factor: `${empLabel} + ${loanLabel} Loan`,
       impact: form.employmentStatus !== 'Salaried' ? '+15% Profile Risk' : 'Standard Risk',
       percentage: form.employmentStatus !== 'Salaried' ? 65 : 25,
       severity: form.employmentStatus !== 'Salaried' ? ('amber' as const) : ('lime' as const),
@@ -905,19 +923,34 @@ export function calculateKPIMetrics(apps: LoanApplication[]): KPIMetrics {
   const genuineApplications = totalApplications - fraudulentApplications;
   const fraudRate = Number(((fraudulentApplications / totalApplications) * 100).toFixed(2));
 
-  const totalAmount = apps.reduce((acc, a) => acc + a.LoanAmountRequested, 0);
-  const avgLoanAmount = Number((totalAmount / (totalApplications * 100000)).toFixed(2));
+  const totalAmount = apps.reduce((acc, a) => acc + (Number(a.LoanAmountRequested) || 0), 0);
+  const avgLoanAmount = totalApplications > 0 ? Number((totalAmount / (totalApplications * 100000)).toFixed(2)) : 0;
+  const avgLoanAmountRupees = totalApplications > 0 ? Math.round(totalAmount / totalApplications) : 0;
 
   const fraudApps = apps.filter((a) => a.FraudFlag === 1);
   const genApps = apps.filter((a) => a.FraudFlag === 0);
 
+  const totalFraudAmt = fraudApps.reduce((acc, a) => acc + (Number(a.LoanAmountRequested) || 0), 0);
+  const totalGenAmt = genApps.reduce((acc, a) => acc + (Number(a.LoanAmountRequested) || 0), 0);
+
   const avgFraudAmount = fraudApps.length > 0 
-    ? Number((fraudApps.reduce((acc, a) => acc + a.LoanAmountRequested, 0) / (fraudApps.length * 100000)).toFixed(1))
-    : 6.8;
+    ? Number((totalFraudAmt / (fraudApps.length * 100000)).toFixed(1))
+    : 0;
 
   const avgGenuineAmount = genApps.length > 0
-    ? Number((genApps.reduce((acc, a) => acc + a.LoanAmountRequested, 0) / (genApps.length * 100000)).toFixed(1))
-    : 4.6;
+    ? Number((totalGenAmt / (genApps.length * 100000)).toFixed(1))
+    : 0;
+
+  const estFraudPreventedCr = Number((totalFraudAmt / 10000000).toFixed(2));
+
+  const totalCibil = apps.reduce((sum, a) => sum + (Number(a.CIBILScore) || 0), 0);
+  const avgCibilScore = totalApplications > 0 ? Math.round(totalCibil / totalApplications) : 0;
+
+  const totalIncome = apps.reduce((sum, a) => sum + (Number(a.MonthlyIncome) || 0), 0);
+  const avgMonthlyIncome = totalApplications > 0 ? Math.round(totalIncome / totalApplications) : 0;
+
+  const totalDti = apps.reduce((sum, a) => sum + (Number(a.DebtToIncomeRatio) || 0), 0);
+  const avgDtiRatio = totalApplications > 0 ? Number((totalDti / totalApplications).toFixed(1)) : 0;
 
   return {
     totalApplications,
@@ -925,9 +958,13 @@ export function calculateKPIMetrics(apps: LoanApplication[]): KPIMetrics {
     fraudulentApplications,
     fraudRate,
     avgLoanAmount,
+    avgLoanAmountRupees,
     avgFraudAmount,
     avgGenuineAmount,
-    estFraudPreventedCr: 3.30,
+    estFraudPreventedCr,
+    avgCibilScore,
+    avgMonthlyIncome,
+    avgDtiRatio,
   };
 }
 

@@ -4,13 +4,14 @@ export type NavigationTab =
   | 'models' 
   | 'checker' 
   | 'explorer' 
-  | 'reports' 
-  | 'settings';
+  | 'settings'
+  | 'reports'; // kept for backward compatibility
 
 export type NavTab = NavigationTab;
 
 export interface AppSettings {
   useLiveApi: boolean;
+  dataSourceMode: 'live' | 'demo';
   sheetDbEndpoint: string;
   fraudProbabilityThreshold: number;
   alertOnFraudFlag: boolean;
@@ -54,9 +55,13 @@ export interface KPIMetrics {
   fraudulentApplications: number;
   fraudRate: number;
   avgLoanAmount: number; // In Lakhs
+  avgLoanAmountRupees: number; // In Rupees
   avgGenuineAmount: number; // In Lakhs
   avgFraudAmount: number; // In Lakhs
   estFraudPreventedCr: number; // In Crores
+  avgCibilScore: number;
+  avgMonthlyIncome: number;
+  avgDtiRatio: number;
 }
 
 export interface ModelMetric {
@@ -107,20 +112,20 @@ export interface DataSourceConfig {
 
 export interface CheckerFormState {
   applicantName: string;
-  applicantAge: number;
-  gender: 'Male' | 'Female' | 'Other';
-  employmentStatus: 'Salaried' | 'Self-Employed' | 'Small Business Owner' | 'Freelance / Gig';
-  numberDependents: number;
-  loanType: 'Personal' | 'Home' | 'Vehicle' | 'Business';
+  applicantAge: number | '';
+  gender: 'Male' | 'Female' | 'Other' | '';
+  employmentStatus: 'Salaried' | 'Self-Employed' | 'Small Business Owner' | 'Freelance / Gig' | 'Retired' | 'Unemployed' | '';
+  numberDependents: number | '';
+  loanType: 'Personal' | 'Home' | 'Vehicle' | 'Business' | 'Education' | '';
   purposeOfLoan: string;
-  loanAmountRequested: number;
-  loanTenureMonths: number;
-  interestRateOffered: number;
-  monthlyIncome: number;
-  existingEMIs: number;
-  cibilScore: number;
-  propertyOwnership: 'Owned' | 'Rented' | 'Mortgaged';
-  loanStatus: 'Under Review' | 'Approved';
+  loanAmountRequested: number | '';
+  loanTenureMonths: number | '';
+  interestRateOffered: number | '';
+  monthlyIncome: number | '';
+  existingEMIs: number | '';
+  cibilScore: number | '';
+  propertyOwnership: 'Owned' | 'Rented' | 'Mortgaged' | '';
+  loanStatus: 'Under Review' | 'Approved' | 'Rejected' | '';
 }
 
 export interface PredictionResult {

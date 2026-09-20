@@ -4,16 +4,17 @@
  * Connected to live SheetDB REST API endpoint: https://sheetdb.io/api/v1/jnveyifpbrsuy
  */
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { NavigationTab, KPIMetrics, LoanApplication, AppSettings } from './types';
 import { 
   fetchLiveLoanApplications, 
   calculateDashboardMetrics, 
+  filterApplicationsByPeriod,
   SHEET_API_URL 
 } from './services/api';
 import { 
   generateCSVContent,
-  PIPELINE_ACTIVITIES,
+  getPipelineActivities,
   FRAUD_ALERTS
 } from './services/dataService';
 import { Sidebar } from './components/Sidebar';
@@ -26,9 +27,8 @@ import { AnalyticsView } from './views/AnalyticsView';
 import { ModelLabView } from './views/ModelLabView';
 import { FraudCheckerView } from './views/FraudCheckerView';
 import { DataExplorerView } from './views/DataExplorerView';
-import { ReportsView } from './views/ReportsView';
 import { SettingsView } from './views/SettingsView';
-import { X, CheckCircle2, Cpu, ShieldCheck, ArrowRight } from 'lucide-react';
+import { X, CheckCircle2, Cpu, ShieldCheck } from 'lucide-react';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<NavigationTab>('overview');
@@ -37,17 +37,8 @@ export default function App() {
   // Live API synchronization states
   const [syncStatus, setSyncStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [lastSyncTime, setLastSyncTime] = useState<string>('Just now');
   const [applications, setApplications] = useState<LoanApplication[]>([]);
-  const [kpis, setKpis] = useState<KPIMetrics>({
-    totalApplications: 0,
-    genuineApplications: 0,
-    fraudulentApplications: 0,
-    fraudRate: 0,
-    avgLoanAmount: 0,
-    avgGenuineAmount: 0,
-    avgFraudAmount: 0,
-    estFraudPreventedCr: 0,
-  });
   
   const [selectedApp, setSelectedApp] = useState<LoanApplication | null>(null);
   
@@ -60,6 +51,7 @@ export default function App() {
   // App Settings configured with verified live endpoint
   const [settings, setSettings] = useState<AppSettings>({
     useLiveApi: true,
+    dataSourceMode: 'live',
     sheetDbEndpoint: SHEET_API_URL,
     fraudProbabilityThreshold: 0.50,
     alertOnFraudFlag: true,
@@ -74,16 +66,13 @@ export default function App() {
     try {
       const liveApps = await fetchLiveLoanApplications(endpoint);
       setApplications(liveApps);
-      const computedKPIs = calculateDashboardMetrics(liveApps);
-      setKpis(computedKPIs);
       setSyncStatus('success');
+      setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     } catch (err: any) {
-      console.error('Technical error fetching live API data:', err);
+      console.error('Error fetching live API data:', err);
       setSyncError(err?.message || 'Failed to connect to SheetDB API endpoint.');
       setSyncStatus('error');
-      // Do NOT silently fall back to demo data; keep real status visible
       setApplications([]);
-      setKpis(calculateDashboardMetrics([]));
     }
   }, [settings.sheetDbEndpoint]);
 
@@ -92,26 +81,36 @@ export default function App() {
     syncLiveDataset();
   }, [syncLiveDataset]);
 
+  // Dynamically filter applications by the active selected period
+  const filteredApplications = useMemo(() => {
+    return filterApplicationsByPeriod(applications, selectedPeriod);
+  }, [applications, selectedPeriod]);
+
+  // Dynamically calculate KPI metrics from the filtered applications array
+  const filteredKpis = useMemo(() => {
+    return calculateDashboardMetrics(filteredApplications);
+  }, [filteredApplications]);
+
   // Test live connection in settings
   const handleTestConnection = async (): Promise<boolean> => {
     try {
       const liveApps = await fetchLiveLoanApplications(settings.sheetDbEndpoint);
       return liveApps && liveApps.length > 0;
     } catch (err) {
-      console.error('Technical error during connection test:', err);
+      console.error('Error during connection test:', err);
       return false;
     }
   };
 
   // Export CSV directly from current applications state
   const handleExportCSV = () => {
-    if (applications.length === 0) return;
-    const csvData = generateCSVContent(applications);
+    if (filteredApplications.length === 0) return;
+    const csvData = generateCSVContent(filteredApplications);
     const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `financial_fraud_analysis_${applications.length}_records.csv`);
+    link.setAttribute('download', `financial_fraud_analysis_${filteredApplications.length}_records.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -119,11 +118,7 @@ export default function App() {
 
   // Add new checked application to active queue
   const handleSaveToQueue = (newApp: LoanApplication) => {
-    setApplications((prev) => {
-      const updated = [newApp, ...prev];
-      setKpis(calculateDashboardMetrics(updated));
-      return updated;
-    });
+    setApplications((prev) => [newApp, ...prev]);
   };
 
   // Update status from modal
@@ -133,18 +128,21 @@ export default function App() {
     );
   };
 
-  const isDataDependentTab = ['overview', 'analytics', 'explorer', 'reports'].includes(activeTab);
+  const isDataDependentTab = ['overview', 'analytics', 'explorer'].includes(activeTab);
+  const dynamicPipelineActivities = useMemo(() => {
+    return getPipelineActivities(filteredApplications.length, lastSyncTime);
+  }, [filteredApplications.length, lastSyncTime]);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#0a0c0e] text-slate-100 antialiased font-sans">
       {/* Left Sidebar Navigation (Desktop) */}
       <div className="hidden lg:block">
         <Sidebar
-          currentTab={activeTab}
-          onSelectTab={(tab: NavigationTab) => setActiveTab(tab)}
+          currentTab={activeTab === 'reports' ? 'analytics' : activeTab}
+          onSelectTab={(tab: NavigationTab) => setActiveTab(tab === 'reports' ? 'analytics' : tab)}
           onOpenPipelineModal={() => setPipelineModalOpen(true)}
           onOpenGuideModal={() => setGuideModalOpen(true)}
-          datasetCount={applications.length}
+          datasetCount={filteredApplications.length}
         />
       </div>
 
@@ -157,9 +155,9 @@ export default function App() {
           />
           <div className="relative z-10 w-72">
             <Sidebar
-              currentTab={activeTab}
+              currentTab={activeTab === 'reports' ? 'analytics' : activeTab}
               onSelectTab={(tab: NavigationTab) => {
-                setActiveTab(tab);
+                setActiveTab(tab === 'reports' ? 'analytics' : tab);
                 setMobileSidebarOpen(false);
               }}
               onOpenPipelineModal={() => {
@@ -170,7 +168,7 @@ export default function App() {
                 setGuideModalOpen(true);
                 setMobileSidebarOpen(false);
               }}
-              datasetCount={applications.length}
+              datasetCount={filteredApplications.length}
             />
           </div>
         </div>
@@ -180,7 +178,7 @@ export default function App() {
       <div className="flex flex-1 flex-col overflow-hidden min-w-0">
         {/* Top Header */}
         <Header
-          currentTab={activeTab}
+          currentTab={activeTab === 'reports' ? 'analytics' : activeTab}
           onToggleMobileSidebar={() => setMobileSidebarOpen(true)}
           onToggleRightRail={() => setRightRailOpen((prev) => !prev)}
           onExportCSV={handleExportCSV}
@@ -188,8 +186,8 @@ export default function App() {
           onChangePeriod={setSelectedPeriod}
           unreadAlertsCount={FRAUD_ALERTS.length}
           syncStatus={syncStatus}
-          datasetCount={applications.length}
-          onRetrySync={() => syncLiveDataset()}
+          datasetCount={filteredApplications.length}
+          onRefreshData={() => syncLiveDataset()}
         />
 
         {/* Dynamic Center Work Area + Collapsible Right Rail */}
@@ -214,20 +212,23 @@ export default function App() {
               {/* Normal rendering when loaded or for independent tabs */}
               {(!isDataDependentTab || syncStatus === 'success') && (
                 <>
-                  {activeTab === 'overview' && (
+                  {(activeTab === 'overview') && (
                     <OverviewView
-                      kpis={kpis}
-                      applications={applications}
+                      kpis={filteredKpis}
+                      applications={filteredApplications}
+                      selectedPeriod={selectedPeriod}
                       onOpenDetails={(app) => setSelectedApp(app)}
                       onNavigateToExplorer={() => setActiveTab('explorer')}
                       onNavigateToChecker={() => setActiveTab('checker')}
                     />
                   )}
 
-                  {activeTab === 'analytics' && (
+                  {(activeTab === 'analytics' || activeTab === 'reports') && (
                     <AnalyticsView
-                      applications={applications}
-                      totalDatasetSize={applications.length}
+                      applications={filteredApplications}
+                      kpis={filteredKpis}
+                      onExportCSV={handleExportCSV}
+                      onNavigateToModelLab={() => setActiveTab('models')}
                     />
                   )}
 
@@ -246,15 +247,8 @@ export default function App() {
 
                   {activeTab === 'explorer' && (
                     <DataExplorerView
-                      applications={applications}
+                      applications={filteredApplications}
                       onOpenDetails={(app) => setSelectedApp(app)}
-                      onExportCSV={handleExportCSV}
-                    />
-                  )}
-
-                  {activeTab === 'reports' && (
-                    <ReportsView
-                      kpis={kpis}
                       onExportCSV={handleExportCSV}
                     />
                   )}
@@ -279,7 +273,8 @@ export default function App() {
             isOpen={rightRailOpen}
             onClose={() => setRightRailOpen(false)}
             onOpenPipelineModal={() => setPipelineModalOpen(true)}
-            datasetCount={applications.length}
+            datasetCount={filteredApplications.length}
+            lastSyncTime={lastSyncTime}
           />
         </div>
       </div>
@@ -302,14 +297,14 @@ export default function App() {
               </div>
               <button
                 onClick={() => setPipelineModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-white p-1 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="py-4 space-y-3.5 text-xs">
-              {PIPELINE_ACTIVITIES.map((act) => (
+              {dynamicPipelineActivities.map((act) => (
                 <div
                   key={act.id}
                   className="p-3 rounded-xl bg-[#181d24] border border-white/10 flex items-center justify-between"
@@ -329,7 +324,7 @@ export default function App() {
             <div className="pt-4 border-t border-white/10 flex justify-end">
               <button
                 onClick={() => setPipelineModalOpen(false)}
-                className="px-4 py-2 bg-[#bbf246] text-[#0a0c0e] font-bold text-xs rounded-xl"
+                className="px-4 py-2 bg-[#bbf246] text-[#0a0c0e] font-bold text-xs rounded-xl cursor-pointer"
               >
                 Close Pipeline View
               </button>
@@ -338,47 +333,47 @@ export default function App() {
         </div>
       )}
 
-      {/* Academic Project Guide Modal */}
+      {/* System Methodology Modal */}
       {guideModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
           <div className="bg-[#14181d] border border-white/10 rounded-2xl w-full max-w-xl p-6 flex flex-col shadow-2xl">
             <div className="flex items-center justify-between pb-4 border-b border-white/10">
               <div className="flex items-center gap-2.5">
                 <ShieldCheck className="w-5 h-5 text-[#bbf246]" />
-                <h3 className="font-bold text-white text-base">Project Methodology & Architecture</h3>
+                <h3 className="font-bold text-white text-base">System Methodology & Architecture</h3>
               </div>
               <button
                 onClick={() => setGuideModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1"
+                className="text-slate-400 hover:text-white p-1 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="py-4 space-y-3 text-xs text-slate-300 leading-relaxed max-h-[70vh] overflow-y-auto">
-              <div className="p-3 rounded-xl bg-[#181d24] border border-white/10">
+              <div className="p-3.5 rounded-xl bg-[#181d24] border border-white/10">
                 <div className="font-bold text-white mb-1">1. Problem Formulation</div>
                 <p>
-                  Retail credit fraud exhibits extreme class imbalance. We formulated risk detection as a supervised binary classification task trained on multi-attribute customer profiles.
+                  Retail credit fraud exhibits extreme class imbalance. Risk detection is formulated as a supervised binary classification system trained on multi-attribute customer profiles and demographic vectors.
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#181d24] border border-white/10">
+              <div className="p-3.5 rounded-xl bg-[#181d24] border border-white/10">
                 <div className="font-bold text-white mb-1">2. Preprocessing & Imbalance Handling</div>
                 <p>
-                  Applied StandardScaler on continuous metrics (Loan Amount, Income, CIBIL). Synthetic Minority Over-sampling Technique (SMOTE) synthesized balanced positive instances in training partitions to avoid majority-class bias.
+                  StandardScaler normalization on continuous metrics (Loan Amount, Income, CIBIL). Synthetic Minority Over-sampling Technique (SMOTE) balanced positive instances in training partitions to avoid majority-class bias.
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#181d24] border border-white/10">
+              <div className="p-3.5 rounded-xl bg-[#181d24] border border-white/10">
                 <div className="font-bold text-white mb-1">3. Evaluated Model Architectures</div>
                 <p>
-                  Compared Logistic Regression, Decision Trees, Naive Bayes, Random Forest, and XGBoost on ROC-AUC, PR-AUC, and F1-score to identify Pareto-optimal latency vs precision trade-offs.
+                  Benchmarked Logistic Regression, Decision Trees, Naive Bayes, Random Forest, and XGBoost on ROC-AUC, PR-AUC, and F1-score to identify Pareto-optimal latency vs precision trade-offs.
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-[#181d24] border border-white/10">
-                <div className="font-bold text-white mb-1">4. Live Data Connector (SheetDB API)</div>
+              <div className="p-3.5 rounded-xl bg-[#181d24] border border-white/10">
+                <div className="font-bold text-white mb-1">4. Live Data Connector (SheetDB REST API)</div>
                 <p>
                   Direct REST integration with SheetDB endpoint (<code>https://sheetdb.io/api/v1/jnveyifpbrsuy</code>), automatically normalizing numeric types, calculating live KPIs, and rendering dynamic analytical cohorts.
                 </p>
@@ -388,9 +383,9 @@ export default function App() {
             <div className="pt-4 border-t border-white/10 flex justify-end">
               <button
                 onClick={() => setGuideModalOpen(false)}
-                className="px-4 py-2 bg-[#bbf246] text-[#0a0c0e] font-bold text-xs rounded-xl"
+                className="px-4 py-2 bg-[#bbf246] text-[#0a0c0e] font-bold text-xs rounded-xl cursor-pointer"
               >
-                Got It
+                Close
               </button>
             </div>
           </div>
