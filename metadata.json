@@ -1,0 +1,7 @@
+{
+  "name": "FraudGuard - Financial Fraud & Risk Analysis",
+  "description": "Production-grade financial fraud detection and customer loan-risk analytics dashboard with multi-model ML evaluation and interactive risk scoring.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

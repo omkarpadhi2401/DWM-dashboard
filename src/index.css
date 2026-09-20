@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@layer base {
+  /* Custom sleek dark scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0f1216;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #252b33;
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #39424e;
+  }
+}
+
+.gauge-circle {
+  transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+.neon-pill-active {
+  background: #bbf246 !important;
+  color: #0a0c0e !important;
+  font-weight: 700;
+  box-shadow: 0 4px 18px -2px rgba(187, 242, 70, 0.45);
+}
+
+.neon-pill-active svg {
+  stroke: #0a0c0e !important;
+}
+
+.grid-pattern {
+  background-size: 24px 24px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+}
