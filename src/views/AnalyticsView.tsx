@@ -234,10 +234,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+          <h2 className="text-[28px] sm:text-[30px] font-bold text-white tracking-tight">
             Fraud Analytics & Reports
           </h2>
-          <p className="text-sm text-slate-400 mt-1">
+          <p className="text-[14px] sm:text-[15px] text-slate-400 font-normal mt-1">
             Examine cohort risk drivers, credit metrics, and synthesize audited portfolio fraud reports.
           </p>
         </div>
@@ -246,7 +246,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
         <div className="flex items-center gap-3">
           <button
             onClick={handlePrint}
-            className="px-3.5 py-2 rounded-xl bg-[#181d24] text-slate-300 hover:text-white border border-white/10 text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-[#181d24] text-slate-300 hover:text-white border border-white/10 text-[13px] sm:text-[14px] font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
           >
             <Printer className="w-4 h-4" />
             <span>Print Report</span>
@@ -254,7 +254,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           {onExportCSV && (
             <button
               onClick={onExportCSV}
-              className="px-3.5 py-2 rounded-xl bg-[#bbf246] text-[#0a0c0e] hover:bg-[#a3e635] text-xs font-bold flex items-center gap-1.5 transition-all shadow-[0_0_18px_-2px_rgba(187,242,70,0.3)] cursor-pointer"
+              className="px-3.5 py-2 rounded-xl bg-[#bbf246] text-[#0a0c0e] hover:bg-[#a3e635] text-[13px] sm:text-[14px] font-semibold flex items-center gap-1.5 transition-all shadow-[0_0_18px_-2px_rgba(187,242,70,0.3)] cursor-pointer"
             >
               <Download className="w-4 h-4" />
               <span>Export CSV</span>
@@ -268,7 +268,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveSubTab('charts')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] sm:text-[14px] font-semibold transition-all cursor-pointer ${
             activeSubTab === 'charts'
               ? 'bg-[#bbf246] text-[#0a0c0e] shadow-sm'
               : 'text-slate-400 hover:text-white'
@@ -280,7 +280,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
         <button
           type="button"
           onClick={() => setActiveSubTab('report')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[13px] sm:text-[14px] font-semibold transition-all cursor-pointer ${
             activeSubTab === 'report'
               ? 'bg-[#bbf246] text-[#0a0c0e] shadow-sm'
               : 'text-slate-400 hover:text-white'
@@ -297,37 +297,37 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           {/* Row 1: High Level KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="bg-[#14181d] rounded-2xl p-4 border border-white/10">
-              <span className="text-xs text-slate-400 block mb-1">Observed Fraud Rate</span>
-              <div className="text-3xl font-black text-[#f43f5e] font-mono">
+              <span className="text-[13px] sm:text-[14px] text-slate-400 font-medium block mb-1">Observed Fraud Rate</span>
+              <div className="text-[26px] sm:text-[28px] font-bold text-[#f43f5e] font-mono">
                 {kpis.fraudRate}%
               </div>
-              <span className="text-xs text-slate-500 mt-1 block">
+              <span className="text-[12px] sm:text-[13px] text-slate-500 mt-1 block">
                 {kpis.fraudulentApplications.toLocaleString()} of {kpis.totalApplications.toLocaleString()} records
               </span>
             </div>
 
             <div className="bg-[#14181d] rounded-2xl p-4 border border-white/10">
-              <span className="text-xs text-slate-400 block mb-1">Prevented Loss Exposure</span>
-              <div className="text-3xl font-black text-white font-mono">
+              <span className="text-[13px] sm:text-[14px] text-slate-400 font-medium block mb-1">Prevented Loss Exposure</span>
+              <div className="text-[26px] sm:text-[28px] font-bold text-white font-mono">
                 ₹{kpis.estFraudPreventedCr} Cr
               </div>
-              <span className="text-xs text-slate-500 mt-1 block">Calculated at average loan size</span>
+              <span className="text-[12px] sm:text-[13px] text-slate-500 mt-1 block">Calculated at average loan size</span>
             </div>
 
             <div className="bg-[#14181d] rounded-2xl p-4 border border-white/10">
-              <span className="text-xs text-slate-400 block mb-1">Average Fraud Ticket</span>
-              <div className="text-3xl font-black text-[#fb923c] font-mono">
+              <span className="text-[13px] sm:text-[14px] text-slate-400 font-medium block mb-1">Average Fraud Ticket</span>
+              <div className="text-[26px] sm:text-[28px] font-bold text-[#fb923c] font-mono">
                 ₹{kpis.avgFraudAmount} L
               </div>
-              <span className="text-xs text-slate-500 mt-1 block">vs Genuine: ₹{kpis.avgGenuineAmount} L</span>
+              <span className="text-[12px] sm:text-[13px] text-slate-500 mt-1 block">vs Genuine: ₹{kpis.avgGenuineAmount} L</span>
             </div>
 
             <div className="bg-[#14181d] rounded-2xl p-4 border border-white/10">
-              <span className="text-xs text-slate-400 block mb-1">Approval Eligible Baseline</span>
-              <div className="text-3xl font-black text-[#bbf246] font-mono">
+              <span className="text-[13px] sm:text-[14px] text-slate-400 font-medium block mb-1">Approval Eligible Baseline</span>
+              <div className="text-[26px] sm:text-[28px] font-bold text-[#bbf246] font-mono">
                 {genuinePct}%
               </div>
-              <span className="text-xs text-slate-500 mt-1 block">{kpis.genuineApplications.toLocaleString()} applications</span>
+              <span className="text-[12px] sm:text-[13px] text-slate-500 mt-1 block">{kpis.genuineApplications.toLocaleString()} applications</span>
             </div>
           </div>
 
@@ -336,17 +336,17 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             {/* By Loan Type */}
             <div className="bg-[#14181d] rounded-2xl p-5 border border-white/10">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-white text-base">Fraud Concentration by Loan Type</h3>
-                <span className="text-xs text-slate-400">Relative risk</span>
+                <h3 className="font-bold text-white text-[18px] sm:text-[20px]">Fraud Concentration by Loan Type</h3>
+                <span className="text-[11px] sm:text-[12px] text-slate-400">Relative risk</span>
               </div>
               <div className="space-y-3">
                 {cohortLoanType.map((item) => (
                   <div key={item.type} className="p-3 rounded-xl bg-[#181d24] border border-white/5">
-                    <div className="flex justify-between text-xs mb-1.5">
-                      <span className="font-semibold text-white">
+                    <div className="flex justify-between text-[12px] sm:text-[13px] mb-1.5">
+                      <span className="font-medium text-white">
                         {item.type} ({item.total.toLocaleString()} total)
                       </span>
-                      <span className={`font-mono font-bold ${item.fraudRate > 3.0 ? 'text-[#f43f5e]' : 'text-[#bbf246]'}`}>
+                      <span className={`font-mono font-semibold ${item.fraudRate > 3.0 ? 'text-[#f43f5e]' : 'text-[#bbf246]'}`}>
                         {item.fraud} flagged ({item.fraudRate}%)
                       </span>
                     </div>
@@ -366,17 +366,17 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             {/* By Employment */}
             <div className="bg-[#14181d] rounded-2xl p-5 border border-white/10">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-white text-base">Fraud Concentration by Employment Status</h3>
-                <span className="text-xs text-slate-400">Risk by stability</span>
+                <h3 className="font-bold text-white text-[18px] sm:text-[20px]">Fraud Concentration by Employment Status</h3>
+                <span className="text-[11px] sm:text-[12px] text-slate-400">Risk by stability</span>
               </div>
               <div className="space-y-3">
                 {cohortEmployment.map((item) => (
                   <div key={item.status} className="p-3 rounded-xl bg-[#181d24] border border-white/5">
-                    <div className="flex justify-between text-xs mb-1.5">
-                      <span className="font-semibold text-white">
+                    <div className="flex justify-between text-[12px] sm:text-[13px] mb-1.5">
+                      <span className="font-medium text-white">
                         {item.status} ({item.total.toLocaleString()} total)
                       </span>
-                      <span className={`font-mono font-bold ${item.fraudRate > 3.0 ? 'text-[#f43f5e]' : 'text-[#bbf246]'}`}>
+                      <span className={`font-mono font-semibold ${item.fraudRate > 3.0 ? 'text-[#f43f5e]' : 'text-[#bbf246]'}`}>
                         {item.fraud} flagged ({item.fraudRate}%)
                       </span>
                     </div>
@@ -398,14 +398,14 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* CIBIL Score Analysis */}
             <div className="bg-[#14181d] rounded-2xl p-5 border border-white/10">
-              <h4 className="font-bold text-white text-sm mb-3">Credit Score (CIBIL) Risk</h4>
-              <div className="space-y-3 text-xs">
+              <h4 className="font-semibold text-white text-[14px] sm:text-[15px] mb-3">Credit Score (CIBIL) Risk</h4>
+              <div className="space-y-3">
                 {cibilBuckets.map((item) => (
                   <div key={item.bucket}>
-                    <div className="flex justify-between text-xs mb-1">
+                    <div className="flex justify-between text-[12px] sm:text-[13px] mb-1">
                       <span className="text-slate-300">{item.bucket}</span>
                       <span className="font-mono text-slate-400">
-                        {item.pct}% vol | <strong className="text-[#f43f5e]">{item.fraudRate}</strong>
+                        {item.pct}% vol | <strong className="text-[#f43f5e] font-semibold">{item.fraudRate}</strong>
                       </span>
                     </div>
                     <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
@@ -414,21 +414,21 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-slate-400 mt-4 leading-normal">
+              <p className="text-[12px] text-slate-400 mt-4 leading-normal">
                 Strong inverse correlation: Scores &lt; 580 show highest fraud density.
               </p>
             </div>
 
             {/* DTI Analysis */}
             <div className="bg-[#14181d] rounded-2xl p-5 border border-white/10">
-              <h4 className="font-bold text-white text-sm mb-3">Debt-to-Income (DTI)</h4>
-              <div className="space-y-3 text-xs">
+              <h4 className="font-semibold text-white text-[14px] sm:text-[15px] mb-3">Debt-to-Income (DTI)</h4>
+              <div className="space-y-3">
                 {dtiBuckets.map((item) => (
                   <div key={item.bucket}>
-                    <div className="flex justify-between text-xs mb-1">
+                    <div className="flex justify-between text-[12px] sm:text-[13px] mb-1">
                       <span className="text-slate-300">{item.bucket}</span>
                       <span className="font-mono text-slate-400">
-                        {item.pct}% vol | <strong className="text-[#f43f5e]">{item.fraudRate}</strong>
+                        {item.pct}% vol | <strong className="text-[#f43f5e] font-semibold">{item.fraudRate}</strong>
                       </span>
                     </div>
                     <div className="w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
@@ -437,20 +437,20 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-slate-400 mt-4 leading-normal">
+              <p className="text-[12px] text-slate-400 mt-4 leading-normal">
                 Severe leverage cliff: DTI above 50% correlates with 4.8x higher risk.
               </p>
             </div>
 
             {/* Gender Demographic Analysis */}
             <div className="bg-[#14181d] rounded-2xl p-5 border border-white/10">
-              <h4 className="font-bold text-white text-sm mb-3">Demographic Fairness (Gender)</h4>
-              <div className="space-y-3 text-xs">
+              <h4 className="font-semibold text-white text-[14px] sm:text-[15px] mb-3">Demographic Fairness (Gender)</h4>
+              <div className="space-y-3">
                 {cohortGender.map((item) => (
                   <div key={item.gender}>
-                    <div className="flex justify-between text-xs mb-1">
+                    <div className="flex justify-between text-[12px] sm:text-[13px] mb-1">
                       <span className="text-slate-300">{item.gender} ({item.total.toLocaleString()} records)</span>
-                      <span className={`font-mono font-bold ${item.fraudRate > 3 ? 'text-[#f43f5e]' : 'text-[#bbf246]'}`}>
+                      <span className={`font-mono font-semibold ${item.fraudRate > 3 ? 'text-[#f43f5e]' : 'text-[#bbf246]'}`}>
                         {item.fraudRate}%
                       </span>
                     </div>
@@ -463,7 +463,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-slate-400 mt-4 leading-normal">
+              <p className="text-[12px] text-slate-400 mt-4 leading-normal">
                 Fair lending parity verified: Variance is within regulatory tolerance.
               </p>
             </div>
@@ -476,37 +476,37 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <div className="bg-[#14181d] rounded-2xl p-6 border border-white/10">
             <div className="flex items-center gap-2.5 mb-3">
               <ShieldCheck className="w-5 h-5 text-[#bbf246]" />
-              <h3 className="font-bold text-white text-base">1. Executive Fraud & Portfolio Summary</h3>
+              <h3 className="font-bold text-white text-[17px] sm:text-[18px]">1. Executive Fraud & Portfolio Summary</h3>
             </div>
-            <p className="text-sm text-slate-300 leading-relaxed mb-4">
+            <p className="text-[13px] sm:text-[14px] text-slate-300 leading-relaxed mb-4">
               Comprehensive analysis of <strong>{kpis.totalApplications.toLocaleString()} loan applications</strong> demonstrates an empirical fraud baseline of{' '}
               <strong>{kpis.fraudulentApplications.toLocaleString()} fraudulent applications ({kpis.fraudRate}%)</strong>, compared to{' '}
               <strong>{kpis.genuineApplications.toLocaleString()} genuine applications ({genuinePct}%)</strong>.
               The average fraudulent application ticket is <strong>₹{kpis.avgFraudAmount} Lakhs</strong>, representing an estimated intercepted risk exposure of <strong>₹{kpis.estFraudPreventedCr} Crores</strong>.
             </p>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="p-3.5 rounded-xl bg-[#181d24] border border-white/10">
-                <span className="text-[11px] text-slate-400 block">Total Portfolio Size</span>
-                <span className="text-xl font-black text-white font-mono mt-1 block">
+                <span className="text-[11px] sm:text-[12px] text-slate-400 block">Total Portfolio Size</span>
+                <span className="text-[20px] sm:text-[22px] font-bold text-white font-mono mt-0.5 block">
                   {kpis.totalApplications.toLocaleString()}
                 </span>
               </div>
               <div className="p-3.5 rounded-xl bg-[#181d24] border border-white/10">
-                <span className="text-[11px] text-slate-400 block">Flagged Fraud Exposure</span>
-                <span className="text-xl font-black text-[#f43f5e] font-mono mt-1 block">
+                <span className="text-[11px] sm:text-[12px] text-slate-400 block">Flagged Fraud Exposure</span>
+                <span className="text-[20px] sm:text-[22px] font-bold text-[#f43f5e] font-mono mt-0.5 block">
                   ₹{kpis.estFraudPreventedCr} Cr
                 </span>
               </div>
               <div className="p-3.5 rounded-xl bg-[#181d24] border border-white/10">
-                <span className="text-[11px] text-slate-400 block">Genuine Approval Baseline</span>
-                <span className="text-xl font-black text-[#bbf246] font-mono mt-1 block">
+                <span className="text-[11px] sm:text-[12px] text-slate-400 block">Genuine Approval Baseline</span>
+                <span className="text-[20px] sm:text-[22px] font-bold text-[#bbf246] font-mono mt-0.5 block">
                   {genuinePct}%
                 </span>
               </div>
               <div className="p-3.5 rounded-xl bg-[#181d24] border border-white/10">
-                <span className="text-[11px] text-slate-400 block">Portfolio Fraud Rate</span>
-                <span className="text-xl font-black text-[#fb923c] font-mono mt-1 block">
+                <span className="text-[11px] sm:text-[12px] text-slate-400 block">Portfolio Fraud Rate</span>
+                <span className="text-[20px] sm:text-[22px] font-bold text-[#fb923c] font-mono mt-0.5 block">
                   {kpis.fraudRate}%
                 </span>
               </div>
@@ -517,27 +517,27 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <div className="bg-[#14181d] rounded-2xl p-6 border border-white/10">
             <div className="flex items-center gap-2.5 mb-3">
               <CheckCircle2 className="w-5 h-5 text-[#bbf246]" />
-              <h3 className="font-bold text-white text-base">2. Dataset & Data Quality Summary</h3>
+              <h3 className="font-bold text-white text-[17px] sm:text-[18px]">2. Dataset & Data Quality Summary</h3>
             </div>
-            <p className="text-sm text-slate-300 leading-relaxed mb-4">
+            <p className="text-[13px] sm:text-[14px] text-slate-300 leading-relaxed mb-4">
               All records are parsed, type-coerced, and normalized from the SheetDB REST API endpoint. The data processing pipeline enforces schema integrity on demographic, financial, and credit attributes:
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-[#181d24] border border-white/10">
-                <div className="text-xs text-slate-400 mb-1">Field Completeness Rate</div>
-                <div className="text-2xl font-black text-white font-mono">{dataQualityStats.completenessRate}%</div>
-                <p className="text-[11px] text-slate-400 mt-1">Zero critical null values in primary financial fields</p>
+                <div className="text-[11px] sm:text-[12px] text-slate-400 mb-1">Field Completeness Rate</div>
+                <div className="text-[22px] sm:text-[24px] font-bold text-white font-mono">{dataQualityStats.completenessRate}%</div>
+                <p className="text-[11px] sm:text-[12px] text-slate-400 mt-1">Zero critical null values in primary financial fields</p>
               </div>
               <div className="p-4 rounded-xl bg-[#181d24] border border-white/10">
-                <div className="text-xs text-slate-400 mb-1">CIBIL Range Integrity</div>
-                <div className="text-2xl font-black text-[#bbf246] font-mono">{dataQualityStats.cibilCoverageRate}%</div>
-                <p className="text-[11px] text-slate-400 mt-1">Bounded strictly between 300 and 900</p>
+                <div className="text-[11px] sm:text-[12px] text-slate-400 mb-1">CIBIL Range Integrity</div>
+                <div className="text-[22px] sm:text-[24px] font-bold text-[#bbf246] font-mono">{dataQualityStats.cibilCoverageRate}%</div>
+                <p className="text-[11px] sm:text-[12px] text-slate-400 mt-1">Bounded strictly between 300 and 900</p>
               </div>
               <div className="p-4 rounded-xl bg-[#181d24] border border-white/10">
-                <div className="text-xs text-slate-400 mb-1">Income & EMI Coherence</div>
-                <div className="text-2xl font-black text-[#bbf246] font-mono">{dataQualityStats.incomeVerifiedRate}%</div>
-                <p className="text-[11px] text-slate-400 mt-1">DTI ratios bounded and validated mathematically</p>
+                <div className="text-[11px] sm:text-[12px] text-slate-400 mb-1">Income & EMI Coherence</div>
+                <div className="text-[22px] sm:text-[24px] font-bold text-[#bbf246] font-mono">{dataQualityStats.incomeVerifiedRate}%</div>
+                <p className="text-[11px] sm:text-[12px] text-slate-400 mt-1">DTI ratios bounded and validated mathematically</p>
               </div>
             </div>
           </div>
@@ -547,25 +547,25 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2.5">
                 <Cpu className="w-5 h-5 text-[#bbf246]" />
-                <h3 className="font-bold text-white text-base">3. Model Performance Summary & Benchmarks</h3>
+                <h3 className="font-bold text-white text-[17px] sm:text-[18px]">3. Model Performance Summary & Benchmarks</h3>
               </div>
               {onNavigateToModelLab && (
                 <button
                   onClick={onNavigateToModelLab}
-                  className="text-xs text-[#bbf246] hover:underline flex items-center gap-1 cursor-pointer font-semibold"
+                  className="text-[12px] sm:text-[13px] text-[#bbf246] hover:underline flex items-center gap-1 cursor-pointer font-medium"
                 >
                   <span>Explore in Model Lab &rarr;</span>
                 </button>
               )}
             </div>
-            <p className="text-sm text-slate-300 leading-relaxed mb-4">
+            <p className="text-[13px] sm:text-[14px] text-slate-300 leading-relaxed mb-4">
               Cross-validated benchmarks of machine learning architectures on SMOTE-balanced loan applications:
             </p>
 
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs whitespace-nowrap">
+              <table className="w-full text-left text-[13px] sm:text-[14px] whitespace-nowrap">
                 <thead>
-                  <tr className="border-b border-white/10 text-slate-400 uppercase tracking-wider text-[11px]">
+                  <tr className="border-b border-white/10 text-slate-400 uppercase tracking-wider text-[11px] sm:text-[12px] font-semibold">
                     <th className="pb-3 px-3">Model Architecture</th>
                     <th className="pb-3 px-3">Accuracy</th>
                     <th className="pb-3 px-3">Precision</th>
@@ -579,25 +579,25 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
                 <tbody className="divide-y divide-white/5 font-mono">
                   {Object.values(MODELS_DATA).map((model) => (
                     <tr key={model.id} className="hover:bg-[#181d24]/50">
-                      <td className="py-3.5 px-3 font-sans font-semibold text-white flex items-center gap-2">
+                      <td className="py-3 px-3 font-sans font-medium text-white flex items-center gap-2">
                         <span>{model.name}</span>
                         {model.badge && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#bbf246]/20 text-[#bbf246] font-bold">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#bbf246]/20 text-[#bbf246] font-semibold">
                             {model.badge}
                           </span>
                         )}
                       </td>
-                      <td className="py-3.5 px-3">{model.accuracy}%</td>
-                      <td className="py-3.5 px-3">{model.precision}%</td>
-                      <td className="py-3.5 px-3">{model.recall}%</td>
-                      <td className="py-3.5 px-3 font-bold text-[#bbf246]">{model.f1}%</td>
-                      <td className="py-3.5 px-3 font-bold text-white">{model.rocAuc}</td>
-                      <td className="py-3.5 px-3 text-slate-400">{model.inferenceMs}</td>
-                      <td className="py-3.5 px-3 text-right font-sans">
+                      <td className="py-3 px-3">{model.accuracy}%</td>
+                      <td className="py-3 px-3">{model.precision}%</td>
+                      <td className="py-3 px-3">{model.recall}%</td>
+                      <td className="py-3 px-3 font-semibold text-[#bbf246]">{model.f1}%</td>
+                      <td className="py-3 px-3 font-semibold text-white">{model.rocAuc}</td>
+                      <td className="py-3 px-3 text-slate-400">{model.inferenceMs}</td>
+                      <td className="py-3 px-3 text-right font-sans">
                         {model.id === 'rf' ? (
-                          <span className="text-[#bbf246] font-bold text-xs">Primary Inference Engine</span>
+                          <span className="text-[#bbf246] font-semibold text-[12px]">Primary Inference Engine</span>
                         ) : (
-                          <span className="text-slate-500 text-xs">Benchmark</span>
+                          <span className="text-slate-500 text-[12px]">Benchmark</span>
                         )}
                       </td>
                     </tr>
@@ -611,28 +611,28 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({
           <div className="bg-[#14181d] rounded-2xl p-6 border border-white/10">
             <div className="flex items-center gap-2.5 mb-3">
               <Layers className="w-5 h-5 text-[#bbf246]" />
-              <h3 className="font-bold text-white text-base">4. Key Findings & Empirical Risk Drivers</h3>
+              <h3 className="font-bold text-white text-[17px] sm:text-[18px]">4. Key Findings & Empirical Risk Drivers</h3>
             </div>
-            <p className="text-sm text-slate-300 leading-relaxed mb-4">
+            <p className="text-[13px] sm:text-[14px] text-slate-300 leading-relaxed mb-4">
               Derived from Gini feature importances, SHAP value distributions, and correlation matrices:
             </p>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-4 rounded-xl bg-[#181d24] border border-white/10">
-                <span className="text-[#f43f5e] font-bold text-sm block mb-1">1. Sub-Prime CIBIL (&lt; 580)</span>
-                <p className="text-slate-300 text-xs leading-relaxed">
+                <span className="text-[#f43f5e] font-semibold text-[14px] sm:text-[15px] block mb-1">1. Sub-Prime CIBIL (&lt; 580)</span>
+                <p className="text-slate-300 text-[12px] sm:text-[13px] leading-relaxed">
                   Strongest non-linear predictor. Applications with credit scores under 580 represent 71% of all validated fraud occurrences.
                 </p>
               </div>
               <div className="p-4 rounded-xl bg-[#181d24] border border-white/10">
-                <span className="text-[#fb923c] font-bold text-sm block mb-1">2. Debt-to-Income (DTI &gt; 50%)</span>
-                <p className="text-slate-300 text-xs leading-relaxed">
+                <span className="text-[#fb923c] font-semibold text-[14px] sm:text-[15px] block mb-1">2. Debt-to-Income (DTI &gt; 50%)</span>
+                <p className="text-slate-300 text-[12px] sm:text-[13px] leading-relaxed">
                   Extreme leverage threshold. Borrowers allocating &gt;50% of monthly income to existing EMIs demonstrate elevated probability of synthetic manipulation.
                 </p>
               </div>
               <div className="p-4 rounded-xl bg-[#181d24] border border-white/10">
-                <span className="text-[#bbf246] font-bold text-sm block mb-1">3. Unsecured Personal Loans</span>
-                <p className="text-slate-300 text-xs leading-relaxed">
+                <span className="text-[#bbf246] font-semibold text-[14px] sm:text-[15px] block mb-1">3. Unsecured Personal Loans</span>
+                <p className="text-slate-300 text-[12px] sm:text-[13px] leading-relaxed">
                   Personal loan applications from self-employed and freelance profiles with minimal collateral carry 3.2x higher rate of identity anomalies.
                 </p>
               </div>

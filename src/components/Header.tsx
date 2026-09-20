@@ -66,27 +66,27 @@ export const Header: React.FC<HeaderProps> = ({
             <Menu className="w-5 h-5" />
           </button>
 
-          <div className="flex items-center gap-2 text-base font-medium whitespace-nowrap">
+          <div className="flex items-center gap-2 text-[13px] sm:text-[14px] font-medium whitespace-nowrap">
             <span className="text-slate-500">Dashboard</span>
             <span className="text-slate-600">/</span>
-            <span className="text-white font-semibold flex items-center gap-1.5">
+            <span className="text-white font-medium flex items-center gap-1.5">
               {getTabLabel(currentTab)}
             </span>
           </div>
 
           {/* Refresh Notification Pill if recently refreshed */}
           {refreshToastMessage && (
-            <span className="hidden md:inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-[#bbf246]/15 text-[#bbf246] border border-[#bbf246]/30 animate-fade-in">
-              <CheckCircle2 className="w-4 h-4" />
+            <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] sm:text-[12px] font-medium bg-[#bbf246]/15 text-[#bbf246] border border-[#bbf246]/30 animate-fade-in">
+              <CheckCircle2 className="w-3.5 h-3.5" />
               {refreshToastMessage}
             </span>
           )}
         </div>
 
         {/* Right Section: Status Indicator, Period Filter, Refresh Button, Export */}
-        <div className="flex items-center gap-3 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
           {/* Subtle Data Connected Indicator */}
-          <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#14181d] border border-white/10 text-xs font-medium">
+          <div className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#14181d] border border-white/10 text-[11px] sm:text-[12px] font-medium">
             <span
               className={`w-2 h-2 rounded-full ${
                 syncStatus === 'loading' || isRefreshing
@@ -112,11 +112,11 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             onClick={onRefreshData}
             disabled={isRefreshing || syncStatus === 'loading'}
-            className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#14181d] hover:bg-[#192028] disabled:opacity-50 text-slate-200 hover:text-white border border-white/10 text-sm font-semibold transition-all cursor-pointer shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#14181d] hover:bg-[#192028] disabled:opacity-50 text-slate-200 hover:text-white border border-white/10 text-[13px] sm:text-[14px] font-medium transition-all cursor-pointer shadow-sm active:scale-95"
             title="Refresh dataset and recalculate metrics"
           >
             <RefreshCw
-              className={`w-4 h-4 text-[#bbf246] ${isRefreshing || syncStatus === 'loading' ? 'animate-spin' : ''}`}
+              className={`w-3.5 h-3.5 text-[#bbf246] ${isRefreshing || syncStatus === 'loading' ? 'animate-spin' : ''}`}
             />
             <span className="hidden sm:inline">
               {isRefreshing || syncStatus === 'loading' ? 'Refreshing...' : 'Refresh'}
@@ -129,7 +129,7 @@ export const Header: React.FC<HeaderProps> = ({
               <select
                 value={selectedPeriod}
                 onChange={(e) => onChangePeriod(e.target.value)}
-                className="bg-[#14181d] hover:bg-[#192028] text-[15px] text-slate-200 font-medium py-2 pl-3.5 pr-9 rounded-xl border border-white/10 focus:outline-none focus:border-[#bbf246] cursor-pointer appearance-none transition-colors"
+                className="bg-[#14181d] hover:bg-[#192028] text-[13px] sm:text-[14px] text-slate-200 font-medium py-1.5 pl-3 pr-8 rounded-xl border border-white/10 focus:outline-none focus:border-[#bbf246] cursor-pointer appearance-none transition-colors"
                 title="Filter dataset period"
               >
                 <option value="all">All Time</option>
@@ -142,17 +142,17 @@ export const Header: React.FC<HeaderProps> = ({
                 <option value="q3">Quarter 3</option>
                 <option value="q4">Quarter 4</option>
               </select>
-              <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
           )}
 
           {/* Export CSV Button */}
           <button
             onClick={onExportCSV}
-            className="hidden xl:flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#14181d] hover:bg-[#192028] border border-white/10 text-sm text-slate-300 font-medium transition-colors cursor-pointer"
+            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#14181d] hover:bg-[#192028] border border-white/10 text-[13px] sm:text-[14px] text-slate-300 font-medium transition-colors cursor-pointer"
             title="Export Cleaned CSV Data"
           >
-            <Download className="w-4 h-4 text-[#bbf246]" />
+            <Download className="w-3.5 h-3.5 text-[#bbf246]" />
             <span>Export CSV</span>
           </button>
 

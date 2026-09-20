@@ -189,42 +189,42 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl sm:text-4xl font-black text-white tracking-tight">
+          <h2 className="text-[28px] sm:text-[30px] font-bold text-white tracking-tight">
             Fraud Risk Checker
           </h2>
-          <p className="text-[15px] sm:text-base text-slate-400 mt-1 leading-relaxed">
+          <p className="text-[14px] sm:text-[15px] text-slate-400 font-normal mt-1 leading-relaxed">
             Real-time inference engine: enter customer profile parameters to generate instant risk probabilities and contributing factors.
           </p>
         </div>
         
         {/* Preset Scenarios + Clear Form */}
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[15px] text-slate-400 font-semibold mr-1">Preload Demo Profile:</span>
+          <span className="text-[13px] sm:text-[14px] text-slate-400 font-medium mr-1">Preload Demo Profile:</span>
           <button
             type="button"
             onClick={() => handleScenario('safe')}
-            className="px-3 py-2 rounded-xl bg-[#14181d] hover:bg-[#181d24] border border-[#bbf246]/30 text-sm font-semibold text-[#bbf246] transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-[#14181d] hover:bg-[#181d24] border border-[#bbf246]/30 text-[13px] sm:text-[14px] font-medium text-[#bbf246] transition-colors cursor-pointer"
           >
             Safe Prime
           </button>
           <button
             type="button"
             onClick={() => handleScenario('borderline')}
-            className="px-3 py-2 rounded-xl bg-[#14181d] hover:bg-[#181d24] border border-[#fb923c]/30 text-sm font-semibold text-[#fb923c] transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-[#14181d] hover:bg-[#181d24] border border-[#fb923c]/30 text-[13px] sm:text-[14px] font-medium text-[#fb923c] transition-colors cursor-pointer"
           >
             Borderline
           </button>
           <button
             type="button"
             onClick={() => handleScenario('risk')}
-            className="px-3 py-2 rounded-xl bg-[#14181d] hover:bg-[#181d24] border border-[#f43f5e]/30 text-sm font-semibold text-[#f43f5e] transition-colors cursor-pointer"
+            className="px-3 py-1.5 rounded-xl bg-[#14181d] hover:bg-[#181d24] border border-[#f43f5e]/30 text-[13px] sm:text-[14px] font-medium text-[#f43f5e] transition-colors cursor-pointer"
           >
             High Risk
           </button>
           <button
             type="button"
             onClick={handleClearForm}
-            className="px-3.5 py-2 rounded-xl bg-[#1d232c] hover:bg-[#252e3a] border border-white/10 text-sm font-semibold text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer ml-1"
+            className="px-3 py-1.5 rounded-xl bg-[#1d232c] hover:bg-[#252e3a] border border-white/10 text-[13px] sm:text-[14px] font-medium text-slate-300 hover:text-white transition-colors flex items-center gap-1.5 cursor-pointer ml-1"
           >
             <RotateCcw className="w-4 h-4" />
             <span>Clear Form</span>
@@ -233,8 +233,8 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
       </div>
 
       {validationError && (
-        <div className="p-4 rounded-xl bg-[#2a1318] border border-[#f43f5e]/50 text-sm font-medium text-[#f43f5e] flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 shrink-0" />
+        <div className="p-3.5 rounded-xl bg-[#2a1318] border border-[#f43f5e]/50 text-[13px] sm:text-[14px] font-medium text-[#f43f5e] flex items-center gap-2">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
           <span>{validationError}</span>
         </div>
       )}
@@ -245,36 +245,36 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
         <div className="lg:col-span-7 bg-[#14181d] rounded-2xl p-6 border border-white/10">
           <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-5">
             <div>
-              <h3 className="text-xl sm:text-2xl font-bold text-white tracking-tight">Application Parameters</h3>
-              <p className="text-[15px] text-slate-400 mt-0.5">Input demographic, income, and debt metrics</p>
+              <h3 className="text-[18px] sm:text-[20px] font-bold text-white tracking-tight">Application Parameters</h3>
+              <p className="text-[13px] sm:text-[14px] text-slate-400 mt-0.5">Input demographic, income, and debt metrics</p>
             </div>
             <button
               type="button"
               onClick={handleClearForm}
-              className="text-sm text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="text-[12px] sm:text-[13px] text-slate-400 hover:text-white flex items-center gap-1.5 transition-colors cursor-pointer"
             >
-              <RotateCcw className="w-4 h-4" />
+              <RotateCcw className="w-3.5 h-3.5" />
               <span>Reset</span>
             </button>
           </div>
 
           <form onSubmit={handleAnalyze} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {/* 1. Applicant Name */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">Applicant Full Name *</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">Applicant Full Name *</label>
                 <input
                   type="text"
                   placeholder="e.g. Rajesh Sharma"
                   value={formState.applicantName}
                   onChange={(e) => setFormState({ ...formState, applicantName: e.target.value })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none"
                 />
               </div>
 
               {/* 2. Applicant Age */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">Applicant Age (Years)</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">Applicant Age (Years)</label>
                 <input
                   type="number"
                   placeholder="e.g. 32"
@@ -282,17 +282,17 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
                   max="80"
                   value={formState.applicantAge}
                   onChange={(e) => setFormState({ ...formState, applicantAge: e.target.value ? Number(e.target.value) : '' })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none font-mono"
                 />
               </div>
 
               {/* 3. Gender */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">Gender</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">Gender</label>
                 <select
                   value={formState.gender}
                   onChange={(e) => setFormState({ ...formState, gender: e.target.value as any })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none"
                 >
                   <option value="">Select Gender</option>
                   <option value="Male">Male</option>
@@ -303,11 +303,11 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
 
               {/* 4. Employment Status */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">Employment Status</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">Employment Status</label>
                 <select
                   value={formState.employmentStatus}
                   onChange={(e) => setFormState({ ...formState, employmentStatus: e.target.value as any })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none"
                 >
                   <option value="">Select Employment Status</option>
                   <option value="Salaried">Salaried</option>
@@ -320,11 +320,11 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
 
               {/* 5. Loan Type */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">Loan Type</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">Loan Type</label>
                 <select
                   value={formState.loanType}
                   onChange={(e) => setFormState({ ...formState, loanType: e.target.value as any })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none"
                 >
                   <option value="">Select Loan Type</option>
                   <option value="Personal">Personal Loan</option>
@@ -337,19 +337,19 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
 
               {/* 6. Purpose of Loan */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">Purpose of Loan</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">Purpose of Loan</label>
                 <input
                   type="text"
                   placeholder="e.g. Home Renovation"
                   value={formState.purposeOfLoan}
                   onChange={(e) => setFormState({ ...formState, purposeOfLoan: e.target.value })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none"
                 />
               </div>
 
               {/* 7. Loan Amount Requested */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">Loan Amount Requested (₹) *</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">Loan Amount Requested (₹) *</label>
                 <input
                   type="number"
                   placeholder="e.g. 500000"
@@ -357,13 +357,13 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
                   min="25000"
                   value={formState.loanAmountRequested}
                   onChange={(e) => setFormState({ ...formState, loanAmountRequested: e.target.value ? Number(e.target.value) : '' })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none font-mono"
                 />
               </div>
 
               {/* 8. Loan Tenure */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">Tenure (Months)</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">Tenure (Months)</label>
                 <input
                   type="number"
                   placeholder="e.g. 36"
@@ -371,13 +371,13 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
                   max="360"
                   value={formState.loanTenureMonths}
                   onChange={(e) => setFormState({ ...formState, loanTenureMonths: e.target.value ? Number(e.target.value) : '' })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none font-mono"
                 />
               </div>
 
               {/* 9. Interest Rate Offered */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">Interest Rate Offered (% p.a.)</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">Interest Rate Offered (% p.a.)</label>
                 <input
                   type="number"
                   placeholder="e.g. 11.5"
@@ -386,44 +386,44 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
                   max="36"
                   value={formState.interestRateOffered}
                   onChange={(e) => setFormState({ ...formState, interestRateOffered: e.target.value ? Number(e.target.value) : '' })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none font-mono"
                 />
               </div>
 
               {/* 10. Monthly Income */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">Monthly Verified Income (₹)</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">Monthly Verified Income (₹)</label>
                 <input
                   type="number"
                   placeholder="e.g. 60000"
                   min="5000"
                   value={formState.monthlyIncome}
                   onChange={(e) => setFormState({ ...formState, monthlyIncome: e.target.value ? Number(e.target.value) : '' })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none font-mono"
                 />
               </div>
 
               {/* 11. Existing EMIs */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">Existing Monthly EMIs (₹)</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">Existing Monthly EMIs (₹)</label>
                 <input
                   type="number"
                   placeholder="e.g. 15000"
                   min="0"
                   value={formState.existingEMIs}
                   onChange={(e) => setFormState({ ...formState, existingEMIs: e.target.value ? Number(e.target.value) : '' })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none font-mono"
                 />
               </div>
 
               {/* 12. Debt-to-Income Ratio (Auto) */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">
                   Debt-to-Income (DTI) Ratio <span className="text-slate-500 font-normal">(Auto)</span>
                 </label>
-                <div className="w-full bg-[#181d24]/60 rounded-xl border border-white/10 text-slate-300 text-sm px-3.5 py-2.5 font-mono flex items-center justify-between">
+                <div className="w-full bg-[#181d24]/60 rounded-xl border border-white/10 text-slate-300 text-[13px] sm:text-[14px] px-3.5 py-2 font-mono flex items-center justify-between">
                   <span>{(computedDTI * 100).toFixed(1)}% ({computedDTI})</span>
-                  <span className={`text-xs font-bold ${computedDTI > 0.5 ? 'text-[#f43f5e]' : 'text-[#bbf246]'}`}>
+                  <span className={`text-[11px] sm:text-[12px] font-semibold ${computedDTI > 0.5 ? 'text-[#f43f5e]' : 'text-[#bbf246]'}`}>
                     {computedDTI > 0.5 ? 'Critical DTI' : 'Healthy'}
                   </span>
                 </div>
@@ -431,7 +431,7 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
 
               {/* 13. CIBIL Score */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">CIBIL Score (300 - 900)</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">CIBIL Score (300 - 900)</label>
                 <input
                   type="number"
                   placeholder="e.g. 720"
@@ -439,17 +439,17 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
                   max="900"
                   value={formState.cibilScore}
                   onChange={(e) => setFormState({ ...formState, cibilScore: e.target.value ? Number(e.target.value) : '' })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none font-mono"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none font-mono"
                 />
               </div>
 
               {/* 14. Property Ownership */}
               <div>
-                <label className="block text-slate-300 mb-1.5 font-medium">Property Ownership</label>
+                <label className="block text-slate-300 mb-1.5 font-medium text-[13px] sm:text-[14px]">Property Ownership</label>
                 <select
                   value={formState.propertyOwnership}
                   onChange={(e) => setFormState({ ...formState, propertyOwnership: e.target.value as any })}
-                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-sm px-3.5 py-2.5 focus:border-[#bbf246] focus:outline-none"
+                  className="w-full bg-[#181d24] rounded-xl border border-white/10 text-slate-200 text-[13px] sm:text-[14px] px-3.5 py-2 focus:border-[#bbf246] focus:outline-none"
                 >
                   <option value="">Select Ownership</option>
                   <option value="Owned">Owned</option>
@@ -460,11 +460,11 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
             </div>
 
             {/* Form Submit & Clear Action Buttons */}
-            <div className="pt-4 flex items-center gap-3">
+            <div className="pt-3 flex items-center gap-3">
               <button
                 type="submit"
                 disabled={isAnalyzing}
-                className="flex-1 bg-[#bbf246] text-[#0a0c0e] font-bold py-3 px-4 rounded-xl hover:bg-[#a3e635] transition-all text-sm flex items-center justify-center gap-2 shadow-[0_0_20px_-3px_rgba(187,242,70,0.35)] disabled:opacity-50 cursor-pointer"
+                className="flex-1 bg-[#bbf246] text-[#0a0c0e] font-semibold py-2.5 px-4 rounded-xl hover:bg-[#a3e635] transition-all text-[13px] sm:text-[14px] flex items-center justify-center gap-2 shadow-[0_0_20px_-3px_rgba(187,242,70,0.35)] disabled:opacity-50 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4" />
                 <span>{isAnalyzing ? 'Analyzing Application Parameters...' : 'Analyze Application'}</span>
@@ -472,7 +472,7 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
               <button
                 type="button"
                 onClick={handleClearForm}
-                className="py-3 px-4 rounded-xl bg-[#181d24] hover:bg-[#202732] border border-white/10 text-slate-300 hover:text-white font-medium text-sm transition-colors cursor-pointer"
+                className="py-2.5 px-4 rounded-xl bg-[#181d24] hover:bg-[#202732] border border-white/10 text-slate-300 hover:text-white font-medium text-[13px] sm:text-[14px] transition-colors cursor-pointer"
               >
                 Clear
               </button>
@@ -485,14 +485,14 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
           {!result ? (
             /* Empty State: Awaiting Application Data */
             <div className="bg-[#14181d] rounded-2xl p-8 border border-white/10 flex flex-col items-center justify-center text-center min-h-[460px]">
-              <div className="w-16 h-16 rounded-2xl bg-[#181d24] border border-white/10 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
-                <ShieldAlert className="w-8 h-8 text-[#bbf246]/60" />
+              <div className="w-14 h-14 rounded-2xl bg-[#181d24] border border-white/10 flex items-center justify-center text-slate-400 mb-4 shadow-inner">
+                <ShieldAlert className="w-7 h-7 text-[#bbf246]/60" />
               </div>
-              <h3 className="text-lg font-bold text-white mb-2">Awaiting Application Data</h3>
-              <p className="text-sm text-slate-400 max-w-xs leading-relaxed mb-6">
-                Fill in the applicant details on the left, or select a preset demo profile above, then click <strong className="text-white font-semibold">"Analyze Application"</strong> to compute real-time risk scores.
+              <h3 className="text-[17px] sm:text-[18px] font-semibold text-white mb-2">Awaiting Application Data</h3>
+              <p className="text-[13px] sm:text-[14px] text-slate-400 max-w-xs leading-relaxed mb-6">
+                Fill in the applicant details on the left, or select a preset demo profile above, then click <strong className="text-white font-medium">"Analyze Application"</strong> to compute real-time risk scores.
               </p>
-              <div className="flex flex-col gap-2 w-full max-w-xs text-xs text-slate-400 font-mono">
+              <div className="flex flex-col gap-2 w-full max-w-xs text-[12px] sm:text-[13px] text-slate-400 font-mono">
                 <div className="p-2.5 rounded-xl bg-[#181d24] border border-white/5 flex items-center justify-between">
                   <span>Random Forest Engine:</span>
                   <span className="text-[#bbf246]">Ready</span>
@@ -516,11 +516,11 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
             >
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <span className="text-xs uppercase tracking-wider font-bold text-slate-400">
+                  <span className="text-[11px] sm:text-[12px] uppercase tracking-wider font-semibold text-slate-400">
                     ML Evaluation Verdict
                   </span>
                   <span
-                    className={`px-3 py-1 rounded-full text-xs font-extrabold tracking-wide ${
+                    className={`px-2.5 py-0.5 rounded-full text-[11px] sm:text-[12px] font-semibold tracking-wide ${
                       result.riskLevel === 'HIGH RISK'
                         ? 'bg-[#f43f5e]/20 text-[#f43f5e]'
                         : result.riskLevel === 'MEDIUM RISK'
@@ -534,7 +534,7 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
 
                 {/* Radial Gauge Meter */}
                 <div className="flex flex-col items-center justify-center my-4">
-                  <div className="relative w-44 h-44 flex items-center justify-center">
+                  <div className="relative w-40 h-40 flex items-center justify-center">
                     <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                       <circle cx="50" cy="50" fill="none" r="40" stroke="#1d242e" strokeWidth="10" />
                       <circle
@@ -558,7 +558,7 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
                     </svg>
                     <div className="absolute text-center">
                       <span
-                        className={`text-4xl font-black tracking-tight font-mono ${
+                        className={`text-[28px] sm:text-[30px] font-bold tracking-tight font-mono ${
                           result.riskLevel === 'HIGH RISK'
                             ? 'text-[#f43f5e]'
                             : result.riskLevel === 'MEDIUM RISK'
@@ -568,17 +568,17 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
                       >
                         {result.fraudProbability}%
                       </span>
-                      <span className="block text-[11px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                      <span className="block text-[11px] text-slate-400 font-medium uppercase tracking-wider mt-0.5">
                         Fraud Risk
                       </span>
                     </div>
                   </div>
 
                   <div className="mt-3 text-center">
-                    <div className="text-base font-bold text-white mb-1">
+                    <div className="text-[15px] sm:text-[16px] font-semibold text-white mb-1">
                       Classification: {result.prediction}
                     </div>
-                    <p className="text-xs sm:text-sm text-slate-300 max-w-sm leading-relaxed">
+                    <p className="text-[13px] sm:text-[14px] text-slate-300 max-w-sm leading-relaxed">
                       {result.recommendation}
                     </p>
                   </div>
@@ -587,16 +587,16 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
 
               {/* Contributing Factors Breakdown */}
               <div className="space-y-3 pt-4 border-t border-white/10">
-                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                <div className="text-[11px] sm:text-[12px] font-semibold text-slate-400 uppercase tracking-wider">
                   Top Contributing Risk Drivers
                 </div>
-                <div className="space-y-2 text-xs">
+                <div className="space-y-2 text-[12px] sm:text-[13px]">
                   {result.contributingFactors.map((f, idx) => (
-                    <div key={idx} className="p-3 rounded-xl bg-[#181d24] border border-white/5">
+                    <div key={idx} className="p-2.5 rounded-xl bg-[#181d24] border border-white/5">
                       <div className="flex items-center justify-between mb-1.5 font-medium">
                         <span className="text-slate-200">{f.factor}</span>
                         <span
-                          className={`font-mono text-xs font-bold ${
+                          className={`font-mono text-[12px] sm:text-[13px] font-semibold ${
                             f.severity === 'coral'
                               ? 'text-[#f43f5e]'
                               : f.severity === 'amber'
@@ -628,7 +628,7 @@ export const FraudCheckerView: React.FC<FraudCheckerViewProps> = ({
                   <button
                     type="button"
                     onClick={handleSaveToQueue}
-                    className="w-full py-2.5 px-4 rounded-xl bg-[#1d232c] hover:bg-[#252e3a] border border-white/10 text-white text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                    className="w-full py-2 px-4 rounded-xl bg-[#1d232c] hover:bg-[#252e3a] border border-white/10 text-white text-[12px] sm:text-[13px] font-medium flex items-center justify-center gap-2 transition-colors cursor-pointer"
                   >
                     {saveSuccess ? (
                       <>
