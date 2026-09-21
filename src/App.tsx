@@ -1,396 +1,92 @@
-/**
- * Financial Fraud Detection & Customer Risk Analysis Dashboard
- * Production-quality dark-mode fintech interface
- * Connected to live SheetDB REST API endpoint: https://sheetdb.io/api/v1/jnveyifpbrsuy
- */
+import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { BarChart3, BookOpen, Database, FlaskConical, LayoutDashboard, Menu, RefreshCw, Search, ShieldCheck, Table2 } from 'lucide-react';
+import {
+  DatasetSummary, EdaResponse, GroupMetric, ModelMetric, ModelResponse, Overview, Prediction, RecordRow,
+  getDatasetSummary, getEda, getModels, getOverview, getRecords, postPrediction,
+} from './services/backendApi';
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
-import { NavigationTab, KPIMetrics, LoanApplication, AppSettings } from './types';
-import { 
-  fetchLiveLoanApplications, 
-  calculateDashboardMetrics, 
-  filterApplicationsByPeriod,
-  SHEET_API_URL 
-} from './services/api';
-import { 
-  generateCSVContent,
-  getPipelineActivities,
-  FRAUD_ALERTS
-} from './services/dataService';
-import { Sidebar } from './components/Sidebar';
-import { Header } from './components/Header';
-import { RightRail } from './components/RightRail';
-import { ApplicationDetailModal } from './components/ApplicationDetailModal';
-import { LoadingSkeleton, ErrorStateCard } from './components/SyncStatusDisplay';
-import { OverviewView } from './views/OverviewView';
-import { AnalyticsView } from './views/AnalyticsView';
-import { ModelLabView } from './views/ModelLabView';
-import { FraudCheckerView } from './views/FraudCheckerView';
-import { DataExplorerView } from './views/DataExplorerView';
-import { SettingsView } from './views/SettingsView';
-import { X, CheckCircle2, Cpu, ShieldCheck } from 'lucide-react';
+type Page = 'overview' | 'analysis' | 'models' | 'predict' | 'records';
+const pages: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'analysis', label: 'Data Analysis', icon: BarChart3 },
+  { id: 'models', label: 'Model Comparison', icon: FlaskConical },
+  { id: 'predict', label: 'Fraud Prediction', icon: ShieldCheck },
+  { id: 'records', label: 'Dataset', icon: Table2 },
+];
+
+const pretty = (value: string) => value.replaceAll('_', ' ').replace(/([a-z])([A-Z])/g, '$1 $2');
+const percent = (value: number) => `${(value * 100).toFixed(1)}%`;
+const money = (value: number) => `₹${Math.round(value).toLocaleString('en-IN')}`;
+
+function SectionTitle({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
+  return <div className="section-title"><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>;
+}
+
+function Metric({ label, value, note }: { label: string; value: string; note?: string }) {
+  return <div className="metric"><span>{label}</span><strong>{value}</strong>{note && <small>{note}</small>}</div>;
+}
+
+function BarList({ title, items }: { title: string; items: GroupMetric[] }) {
+  const max = Math.max(...items.map((item) => item.fraudRate), 1);
+  return <section className="panel chart-panel"><div className="panel-heading"><h2>{title}</h2><span>Fraud rate</span></div><div className="bar-list">{items.map((item) => <div className="bar-item" key={item.label}><div className="bar-label"><span>{item.label}</span><b>{item.fraudRate.toFixed(2)}%</b></div><div className="bar-track"><i style={{ width: `${Math.max(3, (item.fraudRate / max) * 100)}%` }} /></div><small>{item.fraud} flagged of {item.total} records</small></div>)}</div></section>;
+}
+
+function OverviewPage({ overview, summary }: { overview: Overview; summary: DatasetSummary }) {
+  return <div className="page-stack">
+    <SectionTitle eyebrow="Dataset overview" title="What is happening in the loan dataset?" description="A compact view of the observed application population and its measured fraud labels." />
+    <div className="metrics-grid">
+      <Metric label="Total applications" value={overview.totalApplications.toLocaleString()} />
+      <Metric label="Fraudulent applications" value={overview.fraudulentApplications.toLocaleString()} note={`${overview.fraudRate.toFixed(2)}% of records`} />
+      <Metric label="Genuine applications" value={overview.genuineApplications.toLocaleString()} />
+      <Metric label="Average loan amount" value={money(overview.averageLoanAmount)} />
+      <Metric label="Average credit score" value={overview.averageCibilScore ? overview.averageCibilScore.toFixed(0) : 'Not in dataset'} note="CIBILScore is not a source column" />
+    </div>
+    <div className="grid-two"><section className="panel distribution"><div className="panel-heading"><h2>Class distribution</h2><span>Target: FraudFlag</span></div><div className="distribution-bars"><div><b>{overview.genuineApplications.toLocaleString()}</b><span>Genuine</span><i className="genuine" style={{ width: `${overview.genuineApplications / overview.totalApplications * 100}%` }} /></div><div><b>{overview.fraudulentApplications.toLocaleString()}</b><span>Fraud</span><i className="fraud" style={{ width: `${Math.max(3, overview.fraudulentApplications / overview.totalApplications * 100)}%` }} /></div></div><p className="caption">The dataset is imbalanced. Evaluation therefore includes recall and PR-AUC, not accuracy alone.</p></section><section className="panel"><div className="panel-heading"><h2>Dataset profile</h2><span>Source summary</span></div><dl className="summary-list"><div><dt>Rows</dt><dd>{summary.rows.toLocaleString()}</dd></div><div><dt>Columns</dt><dd>{summary.columns}</dd></div><div><dt>Numerical fields</dt><dd>{summary.numericalColumns.length}</dd></div><div><dt>Categorical fields</dt><dd>{summary.categoricalColumns.length}</dd></div><div><dt>Missing values</dt><dd>{Object.values(summary.missingValues).reduce((a, b) => a + b, 0)}</dd></div></dl></section></div>
+    <div className="grid-two"><BarList title="Fraud rate by loan type" items={overview.byLoanType} /><BarList title="Fraud rate by employment" items={overview.byEmployment} /></div>
+    <div className="grid-two"><BarList title="Fraud distribution by age group" items={overview.byAgeGroup} /><BarList title="Fraud rate by month" items={overview.byMonth} /></div>
+  </div>;
+}
+
+function AnalysisPage({ eda, summary }: { eda: EdaResponse; summary: DatasetSummary }) {
+  const distributions = Object.entries(eda.distributions);
+  return <div className="page-stack"><SectionTitle eyebrow="Exploratory data analysis" title="Patterns in the measured features" description="These views are generated from the loaded dataset and support slice, dice, roll-up, and drill-down analysis." /><div className="panel warehouse-note"><div><BookOpen size={20} /><div><h2>Warehouse and OLAP lens</h2><p>Raw records are treated as a fact table with customer, loan, employment, date, and fraud-status dimensions. Age-to-age-group is a roll-up; the category bars are drill-downs; the record filters provide slice and dice operations.</p></div></div><span>{summary.rows.toLocaleString()} source rows</span></div><div className="grid-two">{distributions.slice(0, 4).map(([name, items]) => <section className="panel distribution-panel" key={name}><div className="panel-heading"><h2>{pretty(name)}</h2><span>Fraud rate by quantile</span></div>{items.map((item) => <div className="distribution-row" key={item.range}><span title={item.range}>{item.range}</span><b>{item.fraudRate.toFixed(2)}%</b><i><em style={{ width: `${Math.max(2, item.fraudRate * 5)}%` }} /></i><small>{item.count} records</small></div>)}</section>)}</div><div className="grid-two"><BarList title="Loan type cohort analysis" items={eda.byLoanType} /><BarList title="Employment cohort analysis" items={eda.byEmployment} /></div><section className="panel"><div className="panel-heading"><h2>Correlation with FraudFlag</h2><span>Numeric fields only</span></div><div className="correlation-list">{eda.correlations.map((item) => <div key={item.feature}><span>{pretty(item.feature)}</span><i><em className={item.value < 0 ? 'negative' : ''} style={{ width: `${Math.max(2, Math.abs(item.value) * 100)}%` }} /></i><b>{item.value.toFixed(4)}</b></div>)}</div></section></div>;
+}
+
+function Curve({ points, xKey, yKey, title }: { points: Record<string, number>[]; xKey: string; yKey: string; title: string }) {
+  const path = points.map((point, index) => `${index ? 'L' : 'M'} ${(point[xKey] * 100).toFixed(1)} ${(100 - point[yKey] * 100).toFixed(1)}`).join(' ');
+  return <div className="curve"><h3>{title}</h3><svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M 0 100 L 100 0" className="baseline" /><path d={path} className="curve-line" /></svg><div className="axis"><span>0</span><span>False positive / recall</span><span>1</span></div></div>;
+}
+
+function ModelsPage({ response }: { response: ModelResponse | null }) {
+  const [selected, setSelected] = useState('random_forest');
+  if (!response) return <div className="page-stack"><SectionTitle eyebrow="Model comparison" title="Model results are not available yet" description="Train the five models with python -m ml.train, then refresh this page. The frontend does not invent benchmark values." /><div className="empty-state"><FlaskConical size={32} /><p>No evaluation_results.json was found.</p></div></div>;
+  const metric = response.models[selected] || Object.values(response.models)[0];
+  return <div className="page-stack"><SectionTitle eyebrow="Measured model evaluation" title="Compare classifiers on the untouched test set" description="Metrics below are emitted by the training script. SMOTE is applied only inside the training pipeline after the stratified split." /><section className="panel table-wrap"><table><thead><tr><th>Algorithm</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>ROC-AUC</th><th>PR-AUC</th></tr></thead><tbody>{Object.entries(response.models).map(([key, value]) => <tr className={key === selected ? 'selected' : ''} key={key} onClick={() => setSelected(key)}><td>{pretty(key)}</td><td>{percent(value.accuracy)}</td><td>{percent(value.precision)}</td><td>{percent(value.recall)}</td><td>{percent(value.f1)}</td><td>{value.rocAuc.toFixed(4)}</td><td>{value.prAuc.toFixed(4)}</td></tr>)}</tbody></table></section><div className="grid-two"><section className="panel"><div className="panel-heading"><h2>{pretty(selected)} confusion matrix</h2><span>Test records</span></div><div className="confusion"><div><small>True negative</small><b>{metric.confusionMatrix.tn}</b></div><div><small>False positive</small><b>{metric.confusionMatrix.fp}</b></div><div><small>False negative</small><b>{metric.confusionMatrix.fn}</b></div><div><small>True positive</small><b>{metric.confusionMatrix.tp}</b></div></div></section><section className="panel"><div className="panel-heading"><h2>Feature importance</h2><span>Global model signal</span></div><div className="importance-list">{metric.featureImportance.slice(0, 8).map((item) => <div key={item.feature}><span>{item.feature}</span><i><em style={{ width: `${Math.max(2, item.importance * 100)}%` }} /></i><b>{item.importance.toFixed(3)}</b></div>)}</div></section></div><section className="panel curves"><Curve title="ROC curve" points={metric.rocCurve} xKey="fpr" yKey="tpr" /><Curve title="Precision-recall curve" points={metric.precisionRecallCurve} xKey="recall" yKey="precision" /></section></div>;
+}
+
+const initialForm = { ApplicantAge: 30, Gender: 'Male', EmploymentStatus: 'Salaried', NumberDependents: 0, LoanType: 'Personal Loan', PurposeOfLoan: 'Education', LoanAmountRequested: 500000, LoanTenureMonths: 36, InterestRateOffered: 12, MonthlyIncome: 50000, ExistingEMIs: 10000, DebtToIncomeRatio: 20, PropertyOwnershipStatus: 'Rented', model_name: 'random_forest' };
+function PredictPage({ models }: { models: ModelResponse | null }) {
+  const [form, setForm] = useState(initialForm);
+  const [result, setResult] = useState<Prediction | null>(null);
+  const [error, setError] = useState('');
+  const update = (key: keyof typeof initialForm, value: string) => setForm((current) => ({ ...current, [key]: ['ApplicantAge', 'NumberDependents', 'LoanAmountRequested', 'LoanTenureMonths', 'InterestRateOffered', 'MonthlyIncome', 'ExistingEMIs', 'DebtToIncomeRatio'].includes(key) ? Number(value) : value }));
+  const submit = async (event: FormEvent) => { event.preventDefault(); setError(''); try { setResult(await postPrediction(form)); } catch (err) { setError(err instanceof Error ? err.message : 'Prediction service unavailable'); } };
+  const modelOptions = models ? Object.keys(models.models) : ['random_forest'];
+  return <div className="page-stack"><SectionTitle eyebrow="Inference" title="Predict fraud for one application" description="The form is sent to the saved preprocessing and model pipeline through FastAPI. Inputs match the actual training feature set." /><div className="prediction-layout"><form className="panel form-grid" onSubmit={submit}>{[['ApplicantAge','Age'],['NumberDependents','Dependents'],['LoanAmountRequested','Loan amount'],['LoanTenureMonths','Tenure months'],['InterestRateOffered','Interest rate'],['MonthlyIncome','Monthly income'],['ExistingEMIs','Existing EMIs'],['DebtToIncomeRatio','DTI (%)']].map(([key, label]) => <label key={key}>{label}<input type="number" value={form[key as keyof typeof form] as number} onChange={(event) => update(key as keyof typeof initialForm, event.target.value)} /></label>)}<label>Gender<select value={form.Gender} onChange={(event) => update('Gender', event.target.value)}><option>Male</option><option>Female</option><option>Other</option></select></label><label>Employment<select value={form.EmploymentStatus} onChange={(event) => update('EmploymentStatus', event.target.value)}><option>Salaried</option><option>Self-Employed</option><option>Business Owner</option><option>Student</option><option>Retired</option><option>Unemployed</option></select></label><label>Loan type<select value={form.LoanType} onChange={(event) => update('LoanType', event.target.value)}><option>Personal Loan</option><option>Home Loan</option><option>Car Loan</option><option>Business Loan</option><option>Education Loan</option></select></label><label>Property ownership<select value={form.PropertyOwnershipStatus} onChange={(event) => update('PropertyOwnershipStatus', event.target.value)}><option>Rented</option><option>Owned</option><option>Jointly Owned</option></select></label><label>Purpose<input value={form.PurposeOfLoan} onChange={(event) => update('PurposeOfLoan', event.target.value)} /></label><label>Model<select value={form.model_name} onChange={(event) => update('model_name', event.target.value)}>{modelOptions.map((option) => <option key={option}>{option}</option>)}</select></label><button className="primary-button" type="submit">Run model prediction</button>{error && <p className="error-text">{error}</p>}</form><section className="panel result-panel">{result ? <><span className="eyebrow">Model output</span><strong className={result.prediction ? 'risk' : 'safe'}>{(result.fraudProbability * 100).toFixed(2)}%</strong><h2>{result.classification}</h2><p>Probability returned by the {pretty(result.model)} pipeline.</p><h3>Global feature importance</h3>{result.featureImportance.map((item) => <div className="importance-row" key={item.feature}><span>{item.feature}</span><b>{item.importance.toFixed(3)}</b></div>)}</> : <div className="empty-state"><ShieldCheck size={32} /><p>Submit an application to receive a model-backed probability.</p></div>}</section></div></div>;
+}
+
+function RecordsPage() {
+  const [page, setPage] = useState(1); const [search, setSearch] = useState(''); const [fraud, setFraud] = useState('all'); const [data, setData] = useState<{ total: number; records: RecordRow[] }>({ total: 0, records: [] });
+  useEffect(() => { getRecords(page, search, fraud, 'all', 'all').then(setData).catch(() => setData({ total: 0, records: [] })); }, [page, search, fraud]);
+  const columns = ['ApplicationID', 'ApplicantName', 'LoanType', 'EmploymentStatus', 'LoanAmountRequested', 'DebtToIncomeRatio', 'FraudFlag', 'LoanStatus'];
+  return <div className="page-stack"><SectionTitle eyebrow="Source records" title="Inspect the dataset" description="A small searchable window into the records used by the analytics and training pipeline." /><section className="panel"><div className="record-controls"><label className="search-field"><Search size={16} /><input placeholder="Search application, customer, or applicant" value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} /></label><select value={fraud} onChange={(event) => { setPage(1); setFraud(event.target.value); }}><option value="all">All labels</option><option value="0">Genuine</option><option value="1">Fraud</option></select><span>{data.total.toLocaleString()} matching records</span></div><div className="table-wrap"><table><thead><tr>{columns.map((column) => <th key={column}>{pretty(column)}</th>)}</tr></thead><tbody>{data.records.map((row, index) => <tr key={`${row.ApplicationID}-${index}`}>{columns.map((column) => <td key={column}>{column === 'LoanAmountRequested' ? money(Number(row[column])) : String(row[column] ?? '')}</td>)}</tr>)}</tbody></table></div><div className="pagination"><button disabled={page === 1} onClick={() => setPage((current) => current - 1)}>Previous</button><span>Page {page}</span><button disabled={data.records.length < 20} onClick={() => setPage((current) => current + 1)}>Next</button></div></section></div>;
+}
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<NavigationTab>('overview');
-  const [selectedPeriod, setSelectedPeriod] = useState('All Records');
-  
-  // Live API synchronization states
-  const [syncStatus, setSyncStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [syncError, setSyncError] = useState<string | null>(null);
-  const [lastSyncTime, setLastSyncTime] = useState<string>('Just now');
-  const [applications, setApplications] = useState<LoanApplication[]>([]);
-  
-  const [selectedApp, setSelectedApp] = useState<LoanApplication | null>(null);
-  
-  // Responsive / Rail controls
-  const [rightRailOpen, setRightRailOpen] = useState(true);
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [pipelineModalOpen, setPipelineModalOpen] = useState(false);
-  const [guideModalOpen, setGuideModalOpen] = useState(false);
-
-  // App Settings configured with verified live endpoint
-  const [settings, setSettings] = useState<AppSettings>({
-    useLiveApi: true,
-    dataSourceMode: 'live',
-    sheetDbEndpoint: SHEET_API_URL,
-    fraudProbabilityThreshold: 0.50,
-    alertOnFraudFlag: true,
-    autoRejectHighRisk: false,
-  });
-
-  // Centralized live data fetcher
-  const syncLiveDataset = useCallback(async (customEndpoint?: string) => {
-    setSyncStatus('loading');
-    setSyncError(null);
-    const endpoint = customEndpoint || settings.sheetDbEndpoint || SHEET_API_URL;
-    try {
-      const liveApps = await fetchLiveLoanApplications(endpoint);
-      setApplications(liveApps);
-      setSyncStatus('success');
-      setLastSyncTime(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
-    } catch (err: any) {
-      console.error('Error fetching live API data:', err);
-      setSyncError(err?.message || 'Failed to connect to SheetDB API endpoint.');
-      setSyncStatus('error');
-      setApplications([]);
-    }
-  }, [settings.sheetDbEndpoint]);
-
-  // Initial synchronization on app boot
-  useEffect(() => {
-    syncLiveDataset();
-  }, [syncLiveDataset]);
-
-  // Dynamically filter applications by the active selected period
-  const filteredApplications = useMemo(() => {
-    return filterApplicationsByPeriod(applications, selectedPeriod);
-  }, [applications, selectedPeriod]);
-
-  // Dynamically calculate KPI metrics from the filtered applications array
-  const filteredKpis = useMemo(() => {
-    return calculateDashboardMetrics(filteredApplications);
-  }, [filteredApplications]);
-
-  // Test live connection in settings
-  const handleTestConnection = async (): Promise<boolean> => {
-    try {
-      const liveApps = await fetchLiveLoanApplications(settings.sheetDbEndpoint);
-      return liveApps && liveApps.length > 0;
-    } catch (err) {
-      console.error('Error during connection test:', err);
-      return false;
-    }
-  };
-
-  // Export CSV directly from current applications state
-  const handleExportCSV = () => {
-    if (filteredApplications.length === 0) return;
-    const csvData = generateCSVContent(filteredApplications);
-    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `financial_fraud_analysis_${filteredApplications.length}_records.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Add new checked application to active queue
-  const handleSaveToQueue = (newApp: LoanApplication) => {
-    setApplications((prev) => [newApp, ...prev]);
-  };
-
-  // Update status from modal
-  const handleUpdateStatus = (appId: string, newStatus: 'Approved' | 'Rejected' | 'Under Review') => {
-    setApplications((prev) =>
-      prev.map((a) => (a.ApplicationID === appId ? { ...a, LoanStatus: newStatus } : a))
-    );
-  };
-
-  const isDataDependentTab = ['overview', 'analytics', 'explorer'].includes(activeTab);
-  const dynamicPipelineActivities = useMemo(() => {
-    return getPipelineActivities(filteredApplications.length, lastSyncTime);
-  }, [filteredApplications.length, lastSyncTime]);
-
-  return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#0a0c0e] text-slate-100 antialiased font-sans">
-      {/* Left Sidebar Navigation (Desktop) */}
-      <div className="hidden lg:block">
-        <Sidebar
-          currentTab={activeTab === 'reports' ? 'analytics' : activeTab}
-          onSelectTab={(tab: NavigationTab) => setActiveTab(tab === 'reports' ? 'analytics' : tab)}
-          onOpenPipelineModal={() => setPipelineModalOpen(true)}
-          onOpenGuideModal={() => setGuideModalOpen(true)}
-          datasetCount={filteredApplications.length}
-        />
-      </div>
-
-      {/* Mobile Drawer Sidebar */}
-      {mobileSidebarOpen && (
-        <div className="fixed inset-0 z-50 lg:hidden flex">
-          <div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setMobileSidebarOpen(false)}
-          />
-          <div className="relative z-10 w-72">
-            <Sidebar
-              currentTab={activeTab === 'reports' ? 'analytics' : activeTab}
-              onSelectTab={(tab: NavigationTab) => {
-                setActiveTab(tab === 'reports' ? 'analytics' : tab);
-                setMobileSidebarOpen(false);
-              }}
-              onOpenPipelineModal={() => {
-                setPipelineModalOpen(true);
-                setMobileSidebarOpen(false);
-              }}
-              onOpenGuideModal={() => {
-                setGuideModalOpen(true);
-                setMobileSidebarOpen(false);
-              }}
-              datasetCount={filteredApplications.length}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Main Workspace Layout */}
-      <div className="flex flex-1 flex-col overflow-hidden min-w-0">
-        {/* Top Header */}
-        <Header
-          currentTab={activeTab === 'reports' ? 'analytics' : activeTab}
-          onToggleMobileSidebar={() => setMobileSidebarOpen(true)}
-          onToggleRightRail={() => setRightRailOpen((prev) => !prev)}
-          onExportCSV={handleExportCSV}
-          selectedPeriod={selectedPeriod}
-          onChangePeriod={setSelectedPeriod}
-          unreadAlertsCount={FRAUD_ALERTS.length}
-          syncStatus={syncStatus}
-          datasetCount={filteredApplications.length}
-          onRefreshData={() => syncLiveDataset()}
-        />
-
-        {/* Dynamic Center Work Area + Collapsible Right Rail */}
-        <div className="flex flex-1 overflow-hidden min-h-0">
-          {/* Scrollable Center Content */}
-          <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-7 min-w-0">
-            <div className="max-w-7xl mx-auto pb-12">
-              {/* If data-dependent tab is loading */}
-              {isDataDependentTab && syncStatus === 'loading' && (
-                <LoadingSkeleton endpoint={settings.sheetDbEndpoint} />
-              )}
-
-              {/* If data-dependent tab encountered an error */}
-              {isDataDependentTab && syncStatus === 'error' && (
-                <ErrorStateCard
-                  error={syncError || 'Network request failed'}
-                  endpoint={settings.sheetDbEndpoint}
-                  onRetry={() => syncLiveDataset()}
-                />
-              )}
-
-              {/* Normal rendering when loaded or for independent tabs */}
-              {(!isDataDependentTab || syncStatus === 'success') && (
-                <>
-                  {(activeTab === 'overview') && (
-                    <OverviewView
-                      kpis={filteredKpis}
-                      applications={filteredApplications}
-                      selectedPeriod={selectedPeriod}
-                      onOpenDetails={(app) => setSelectedApp(app)}
-                      onNavigateToExplorer={() => setActiveTab('explorer')}
-                      onNavigateToChecker={() => setActiveTab('checker')}
-                    />
-                  )}
-
-                  {(activeTab === 'analytics' || activeTab === 'reports') && (
-                    <AnalyticsView
-                      applications={filteredApplications}
-                      kpis={filteredKpis}
-                      onExportCSV={handleExportCSV}
-                      onNavigateToModelLab={() => setActiveTab('models')}
-                    />
-                  )}
-
-                  {activeTab === 'models' && (
-                    <ModelLabView
-                      onNavigateToChecker={() => setActiveTab('checker')}
-                    />
-                  )}
-
-                  {activeTab === 'checker' && (
-                    <FraudCheckerView
-                      onSaveToQueue={handleSaveToQueue}
-                      onNavigateToExplorer={() => setActiveTab('explorer')}
-                    />
-                  )}
-
-                  {activeTab === 'explorer' && (
-                    <DataExplorerView
-                      applications={filteredApplications}
-                      onOpenDetails={(app) => setSelectedApp(app)}
-                      onExportCSV={handleExportCSV}
-                    />
-                  )}
-
-                  {activeTab === 'settings' && (
-                    <SettingsView
-                      settings={settings}
-                      onUpdateSettings={(newSet) => {
-                        setSettings(newSet);
-                        syncLiveDataset(newSet.sheetDbEndpoint);
-                      }}
-                      onTestConnection={handleTestConnection}
-                    />
-                  )}
-                </>
-              )}
-            </div>
-          </main>
-
-          {/* Right Rail: Alert Feed, Pipeline Progress, System Health */}
-          <RightRail
-            isOpen={rightRailOpen}
-            onClose={() => setRightRailOpen(false)}
-            onOpenPipelineModal={() => setPipelineModalOpen(true)}
-            datasetCount={filteredApplications.length}
-            lastSyncTime={lastSyncTime}
-          />
-        </div>
-      </div>
-
-      {/* Application Drill-down Modal / Drawer */}
-      <ApplicationDetailModal
-        application={selectedApp}
-        onClose={() => setSelectedApp(null)}
-        onUpdateStatus={handleUpdateStatus}
-      />
-
-      {/* Pipeline Status Modal */}
-      {pipelineModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#14181d] border border-white/10 rounded-2xl w-full max-w-lg p-6 flex flex-col shadow-2xl">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <div className="flex items-center gap-2.5">
-                <Cpu className="w-5 h-5 text-[#bbf246]" />
-                <h3 className="font-bold text-white text-base">ML Pipeline Orchestrator</h3>
-              </div>
-              <button
-                onClick={() => setPipelineModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="py-4 space-y-3.5 text-xs">
-              {dynamicPipelineActivities.map((act) => (
-                <div
-                  key={act.id}
-                  className="p-3 rounded-xl bg-[#181d24] border border-white/10 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="w-4 h-4 text-[#bbf246]" />
-                    <div>
-                      <div className="font-bold text-white">{act.title}</div>
-                      <div className="text-[11px] text-slate-400">{act.subtitle}</div>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-mono text-slate-400">{act.timestamp}</span>
-                </div>
-              ))}
-            </div>
-
-            <div className="pt-4 border-t border-white/10 flex justify-end">
-              <button
-                onClick={() => setPipelineModalOpen(false)}
-                className="px-4 py-2 bg-[#bbf246] text-[#0a0c0e] font-bold text-xs rounded-xl cursor-pointer"
-              >
-                Close Pipeline View
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* System Methodology Modal */}
-      {guideModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-[#14181d] border border-white/10 rounded-2xl w-full max-w-xl p-6 flex flex-col shadow-2xl">
-            <div className="flex items-center justify-between pb-4 border-b border-white/10">
-              <div className="flex items-center gap-2.5">
-                <ShieldCheck className="w-5 h-5 text-[#bbf246]" />
-                <h3 className="font-bold text-white text-base">System Methodology & Architecture</h3>
-              </div>
-              <button
-                onClick={() => setGuideModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 cursor-pointer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="py-4 space-y-3 text-xs text-slate-300 leading-relaxed max-h-[70vh] overflow-y-auto">
-              <div className="p-3.5 rounded-xl bg-[#181d24] border border-white/10">
-                <div className="font-bold text-white mb-1">1. Problem Formulation</div>
-                <p>
-                  Retail credit fraud exhibits extreme class imbalance. Risk detection is formulated as a supervised binary classification system trained on multi-attribute customer profiles and demographic vectors.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#181d24] border border-white/10">
-                <div className="font-bold text-white mb-1">2. Preprocessing & Imbalance Handling</div>
-                <p>
-                  StandardScaler normalization on continuous metrics (Loan Amount, Income, CIBIL). Synthetic Minority Over-sampling Technique (SMOTE) balanced positive instances in training partitions to avoid majority-class bias.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#181d24] border border-white/10">
-                <div className="font-bold text-white mb-1">3. Evaluated Model Architectures</div>
-                <p>
-                  Benchmarked Logistic Regression, Decision Trees, Naive Bayes, Random Forest, and XGBoost on ROC-AUC, PR-AUC, and F1-score to identify Pareto-optimal latency vs precision trade-offs.
-                </p>
-              </div>
-
-              <div className="p-3.5 rounded-xl bg-[#181d24] border border-white/10">
-                <div className="font-bold text-white mb-1">4. Live Data Connector (SheetDB REST API)</div>
-                <p>
-                  Direct REST integration with SheetDB endpoint (<code>https://sheetdb.io/api/v1/jnveyifpbrsuy</code>), automatically normalizing numeric types, calculating live KPIs, and rendering dynamic analytical cohorts.
-                </p>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-white/10 flex justify-end">
-              <button
-                onClick={() => setGuideModalOpen(false)}
-                className="px-4 py-2 bg-[#bbf246] text-[#0a0c0e] font-bold text-xs rounded-xl cursor-pointer"
-              >
-                Close
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+  const [page, setPage] = useState<Page>('overview'); const [menuOpen, setMenuOpen] = useState(false); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  const [summary, setSummary] = useState<DatasetSummary | null>(null); const [overview, setOverview] = useState<Overview | null>(null); const [eda, setEda] = useState<EdaResponse | null>(null); const [models, setModels] = useState<ModelResponse | null>(null);
+  const load = () => { setLoading(true); setError(''); Promise.all([getDatasetSummary(), getOverview(), getEda(), getModels().catch(() => null)]).then(([nextSummary, nextOverview, nextEda, nextModels]) => { setSummary(nextSummary); setOverview(nextOverview); setEda(nextEda); setModels(nextModels); }).catch((err) => setError(err instanceof Error ? err.message : 'FastAPI is unavailable.')).finally(() => setLoading(false)); };
+  useEffect(load, []);
+  const current = useMemo(() => pages.find((item) => item.id === page), [page]);
+  return <div className="app-shell"><header className="topbar"><button className="menu-button" onClick={() => setMenuOpen((open) => !open)} aria-label="Open navigation"><Menu size={20} /></button><div className="brand"><span className="brand-mark"><Database size={20} /></span><div><strong>Financial Fraud Analytics</strong><small>Academic data mining system</small></div></div><div className="topbar-meta"><span className="status-dot" />{summary ? `${summary.rows.toLocaleString()} records loaded` : 'Connecting to analysis API'}<button className="icon-button" onClick={load} title="Refresh data"><RefreshCw size={16} /></button></div></header><div className="layout"><aside className={menuOpen ? 'sidebar open' : 'sidebar'}><nav>{pages.map(({ id, label, icon: Icon }) => <button className={page === id ? 'nav-item active' : 'nav-item'} key={id} onClick={() => { setPage(id); setMenuOpen(false); }}><Icon size={17} /><span>{label}</span></button>)}</nav><div className="sidebar-foot"><span>Source of truth</span><b>FastAPI + saved models</b></div></aside><main>{loading ? <div className="loading"><RefreshCw className="spin" /><p>Loading dataset analyses...</p></div> : error ? <div className="empty-state error-box"><Database size={32} /><h2>Analysis API unavailable</h2><p>{error}</p><p>Start it with <code>uvicorn backend.main:app --reload --port 8000</code>.</p><button className="primary-button" onClick={load}>Retry</button></div> : summary && overview && eda ? <>{current && <div className="breadcrumb">Project / {current.label}</div>}{page === 'overview' && <OverviewPage overview={overview} summary={summary} />}{page === 'analysis' && <AnalysisPage eda={eda} summary={summary} />}{page === 'models' && <ModelsPage response={models} />}{page === 'predict' && <PredictPage models={models} />}{page === 'records' && <RecordsPage />}</> : null}</main></div></div>;
 }
