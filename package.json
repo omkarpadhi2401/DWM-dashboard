@@ -8,7 +8,9 @@
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "api": "uvicorn backend.main:app --reload --port 8000",
+    "train": "python3 -m ml.train"
   },
   "dependencies": {
     "@google/genai": "^2.4.0",
