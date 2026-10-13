@@ -1,92 +1,234 @@
-import { FormEvent, useEffect, useMemo, useState } from 'react';
-import { BarChart3, BookOpen, Database, FlaskConical, LayoutDashboard, Menu, RefreshCw, Search, ShieldCheck, Table2 } from 'lucide-react';
-import {
-  DatasetSummary, EdaResponse, GroupMetric, ModelMetric, ModelResponse, Overview, Prediction, RecordRow,
-  getDatasetSummary, getEda, getModels, getOverview, getRecords, postPrediction,
-} from './services/backendApi';
+import { ReactNode, useEffect, useState } from 'react';
+import { Activity, BarChart3, Boxes, ClipboardList, Cpu, Database, FileSearch, FilePlus2, Files, FlaskConical, Inbox, LayoutDashboard, ListChecks, LogOut, Menu, Server, Settings, ShieldCheck, Table2 } from 'lucide-react';
+import { AuthProvider, useAuth } from './lib/auth';
+import { navigate, useRoute, Route } from './lib/router';
+import { StatsProvider, useStats } from './lib/stats';
+import { ConfirmDialog, LoadingState, ToastProvider } from './ui';
+import { LoginPage, SignupPage } from './pages/AuthPages';
+import { AdminDashboard } from './pages/admin/AdminDashboard';
+import { ApplicationsPage } from './pages/admin/ApplicationsPage';
+import { ApplicationReview } from './pages/admin/ApplicationReview';
+import { AnalyticsPage } from './pages/admin/AnalyticsPage';
+import { FraudCheckerPage } from './pages/admin/FraudCheckerPage';
+import { DataExplorerPage } from './pages/admin/DataExplorerPage';
+import { SettingsPage } from './pages/admin/SettingsPage';
+import { ModelLabPage } from './pages/admin/ModelLabPage';
+import { TechDashboard } from './pages/technical/TechDashboard';
+import { DatasetOverviewPage } from './pages/technical/DatasetOverviewPage';
+import { DataQualityPage } from './pages/technical/DataQualityPage';
+import { ModelComparisonPage } from './pages/technical/ModelComparisonPage';
+import { ModelPerformancePage } from './pages/technical/ModelPerformancePage';
+import { FeatureAnalysisPage } from './pages/technical/FeatureAnalysisPage';
+import { OlapPage } from './pages/technical/OlapPage';
+import { SystemPage } from './pages/technical/SystemPage';
+import { TechSettingsPage } from './pages/technical/TechSettingsPage';
+import { ApplyPage } from './pages/customer/ApplyPage';
+import { CustomerApplicationDetail, CustomerDashboard, MyApplicationsPage } from './pages/customer/CustomerPages';
 
-type Page = 'overview' | 'analysis' | 'models' | 'predict' | 'records';
-const pages: { id: Page; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
-  { id: 'analysis', label: 'Data Analysis', icon: BarChart3 },
-  { id: 'models', label: 'Model Comparison', icon: FlaskConical },
-  { id: 'predict', label: 'Fraud Prediction', icon: ShieldCheck },
-  { id: 'records', label: 'Dataset', icon: Table2 },
+// ---------------------------------------------------------------- navigation
+type NavItem = { path: string; label: string; icon: typeof LayoutDashboard; match: (path: string) => boolean; badge?: 'new' };
+const officerNav: NavItem[] = [
+  { path: '/admin', label: 'Dashboard', icon: LayoutDashboard, match: (p) => p === '/admin' },
+  { path: '/admin/new', label: 'New Applications', icon: Inbox, match: (p) => p === '/admin/new', badge: 'new' },
+  { path: '/admin/applications', label: 'All Applications', icon: Files, match: (p) => p.startsWith('/admin/applications') },
+  { path: '/admin/analytics', label: 'Fraud Analytics', icon: BarChart3, match: (p) => p === '/admin/analytics' },
+  { path: '/admin/checker', label: 'Fraud Checker', icon: ShieldCheck, match: (p) => p === '/admin/checker' },
+  { path: '/admin/explorer', label: 'Data Explorer', icon: Table2, match: (p) => p === '/admin/explorer' },
+  { path: '/admin/settings', label: 'Settings', icon: Settings, match: (p) => p === '/admin/settings' || p === '/admin/model-lab' },
+];
+// Admin / Technical panel: a separate area (role "admin"), distinct from the Bank Officer workspace above.
+const technicalNav: NavItem[] = [
+  { path: '/technical', label: 'Admin Dashboard', icon: LayoutDashboard, match: (p) => p === '/technical' },
+  { path: '/technical/dataset', label: 'Dataset Overview', icon: Database, match: (p) => p === '/technical/dataset' },
+  { path: '/technical/explorer', label: 'Data Explorer', icon: Table2, match: (p) => p === '/technical/explorer' },
+  { path: '/technical/analytics', label: 'Fraud Analytics', icon: BarChart3, match: (p) => p === '/technical/analytics' },
+  { path: '/technical/models', label: 'ML Model Comparison', icon: FlaskConical, match: (p) => p === '/technical/models' },
+  { path: '/technical/performance', label: 'Model Performance', icon: Activity, match: (p) => p === '/technical/performance' },
+  { path: '/technical/features', label: 'Feature Analysis', icon: Cpu, match: (p) => p === '/technical/features' },
+  { path: '/technical/quality', label: 'Data Quality', icon: ListChecks, match: (p) => p === '/technical/quality' },
+  { path: '/technical/olap', label: 'DWM / OLAP Analysis', icon: Boxes, match: (p) => p === '/technical/olap' },
+  { path: '/technical/system', label: 'System / Technical Info', icon: Server, match: (p) => p === '/technical/system' },
+  { path: '/technical/settings', label: 'Settings', icon: Settings, match: (p) => p === '/technical/settings' },
+];
+const HOME: Record<string, string> = { officer: '/admin', customer: '/customer', admin: '/technical' };
+const customerNav: NavItem[] = [
+  { path: '/customer', label: 'Dashboard', icon: LayoutDashboard, match: (p) => p === '/customer' },
+  { path: '/customer/apply', label: 'Apply for Loan', icon: FilePlus2, match: (p) => p === '/customer/apply' },
+  { path: '/customer/applications', label: 'My Applications', icon: ClipboardList, match: (p) => p.startsWith('/customer/applications') },
 ];
 
-const pretty = (value: string) => value.replaceAll('_', ' ').replace(/([a-z])([A-Z])/g, '$1 $2');
-const percent = (value: number) => `${(value * 100).toFixed(1)}%`;
-const money = (value: number) => `₹${Math.round(value).toLocaleString('en-IN')}`;
-
-function SectionTitle({ eyebrow, title, description }: { eyebrow: string; title: string; description: string }) {
-  return <div className="section-title"><span className="eyebrow">{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>;
+function NewCount() {
+  const { stats } = useStats();
+  if (!stats) return null;
+  return <span className={`nav-count ${stats.new === 0 ? 'zero' : ''}`} aria-label={`${stats.new} new applications`}>{stats.new}</span>;
 }
 
-function Metric({ label, value, note }: { label: string; value: string; note?: string }) {
-  return <div className="metric"><span>{label}</span><strong>{value}</strong>{note && <small>{note}</small>}</div>;
-}
-
-function BarList({ title, items }: { title: string; items: GroupMetric[] }) {
-  const max = Math.max(...items.map((item) => item.fraudRate), 1);
-  return <section className="panel chart-panel"><div className="panel-heading"><h2>{title}</h2><span>Fraud rate</span></div><div className="bar-list">{items.map((item) => <div className="bar-item" key={item.label}><div className="bar-label"><span>{item.label}</span><b>{item.fraudRate.toFixed(2)}%</b></div><div className="bar-track"><i style={{ width: `${Math.max(3, (item.fraudRate / max) * 100)}%` }} /></div><small>{item.fraud} flagged of {item.total} records</small></div>)}</div></section>;
-}
-
-function OverviewPage({ overview, summary }: { overview: Overview; summary: DatasetSummary }) {
-  return <div className="page-stack">
-    <SectionTitle eyebrow="Dataset overview" title="What is happening in the loan dataset?" description="A compact view of the observed application population and its measured fraud labels." />
-    <div className="metrics-grid">
-      <Metric label="Total applications" value={overview.totalApplications.toLocaleString()} />
-      <Metric label="Fraudulent applications" value={overview.fraudulentApplications.toLocaleString()} note={`${overview.fraudRate.toFixed(2)}% of records`} />
-      <Metric label="Genuine applications" value={overview.genuineApplications.toLocaleString()} />
-      <Metric label="Average loan amount" value={money(overview.averageLoanAmount)} />
-      <Metric label="Average credit score" value={overview.averageCibilScore ? overview.averageCibilScore.toFixed(0) : 'Not in dataset'} note="CIBILScore is not a source column" />
+function Shell({ route, children }: { route: Route; children: ReactNode }) {
+  const { user, logout } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [confirmLogout, setConfirmLogout] = useState(false);
+  const items = user?.role === 'officer' ? officerNav : user?.role === 'admin' ? technicalNav : customerNav;
+  const initials = (user?.name ?? '?').split(' ').map((part) => part[0]).slice(0, 2).join('').toUpperCase();
+  useEffect(() => setOpen(false), [route.path]);
+  return (
+    <div className="shell">
+      {open && <div className="scrim" onClick={() => setOpen(false)} />}
+      <aside className={`sidebar ${open ? 'open' : ''}`}>
+        <div className="brand">
+          <span className="brand-mark"><FileSearch size={18} /></span>
+          <div>
+            <strong>FraudGuard</strong>
+            <small>{user?.role === 'officer' ? 'Bank officer workspace' : user?.role === 'admin' ? 'Admin / Technical panel' : 'Customer loan portal'}</small>
+          </div>
+        </div>
+        <nav className="nav" aria-label="Main">
+          {items.map(({ path, label, icon: Icon, match, badge }) => (
+            <button type="button" key={path} className={`nav-item ${match(route.path) ? 'active' : ''}`} aria-current={match(route.path) ? 'page' : undefined} onClick={() => navigate(path)}>
+              <Icon size={17} />
+              <span>{label}</span>
+              {badge === 'new' && <NewCount />}
+            </button>
+          ))}
+        </nav>
+        <div className="sidebar-footer">
+          <div className="user-chip">
+            <span className="avatar">{initials}</span>
+            <div>
+              <strong>{user?.name}</strong>
+              <small>{user?.role === 'officer' ? 'Bank officer' : user?.role === 'admin' ? 'Admin / Technical' : `Customer · ${user?.customerId}`}</small>
+            </div>
+          </div>
+          <button type="button" className="btn btn-secondary btn-sm" onClick={() => setConfirmLogout(true)}>
+            <LogOut size={15} /> Sign out
+          </button>
+        </div>
+      </aside>
+      <div className="main">
+        <header className="topbar">
+          <button type="button" className="icon-btn" onClick={() => setOpen(true)} aria-label="Open navigation"><Menu size={20} /></button>
+          <strong>FraudGuard</strong>
+        </header>
+        <main className="content">{children}</main>
+      </div>
+      {confirmLogout && (
+        <ConfirmDialog
+          title="Sign out?"
+          message={<p>You will need to sign in again to continue.</p>}
+          confirmLabel="Sign out"
+          onCancel={() => setConfirmLogout(false)}
+          onConfirm={async () => {
+            setConfirmLogout(false);
+            await logout();
+            navigate('/login', { replace: true });
+          }}
+        />
+      )}
     </div>
-    <div className="grid-two"><section className="panel distribution"><div className="panel-heading"><h2>Class distribution</h2><span>Target: FraudFlag</span></div><div className="distribution-bars"><div><b>{overview.genuineApplications.toLocaleString()}</b><span>Genuine</span><i className="genuine" style={{ width: `${overview.genuineApplications / overview.totalApplications * 100}%` }} /></div><div><b>{overview.fraudulentApplications.toLocaleString()}</b><span>Fraud</span><i className="fraud" style={{ width: `${Math.max(3, overview.fraudulentApplications / overview.totalApplications * 100)}%` }} /></div></div><p className="caption">The dataset is imbalanced. Evaluation therefore includes recall and PR-AUC, not accuracy alone.</p></section><section className="panel"><div className="panel-heading"><h2>Dataset profile</h2><span>Source summary</span></div><dl className="summary-list"><div><dt>Rows</dt><dd>{summary.rows.toLocaleString()}</dd></div><div><dt>Columns</dt><dd>{summary.columns}</dd></div><div><dt>Numerical fields</dt><dd>{summary.numericalColumns.length}</dd></div><div><dt>Categorical fields</dt><dd>{summary.categoricalColumns.length}</dd></div><div><dt>Missing values</dt><dd>{Object.values(summary.missingValues).reduce((a, b) => a + b, 0)}</dd></div></dl></section></div>
-    <div className="grid-two"><BarList title="Fraud rate by loan type" items={overview.byLoanType} /><BarList title="Fraud rate by employment" items={overview.byEmployment} /></div>
-    <div className="grid-two"><BarList title="Fraud distribution by age group" items={overview.byAgeGroup} /><BarList title="Fraud rate by month" items={overview.byMonth} /></div>
-  </div>;
+  );
 }
 
-function AnalysisPage({ eda, summary }: { eda: EdaResponse; summary: DatasetSummary }) {
-  const distributions = Object.entries(eda.distributions);
-  return <div className="page-stack"><SectionTitle eyebrow="Exploratory data analysis" title="Patterns in the measured features" description="These views are generated from the loaded dataset and support slice, dice, roll-up, and drill-down analysis." /><div className="panel warehouse-note"><div><BookOpen size={20} /><div><h2>Warehouse and OLAP lens</h2><p>Raw records are treated as a fact table with customer, loan, employment, date, and fraud-status dimensions. Age-to-age-group is a roll-up; the category bars are drill-downs; the record filters provide slice and dice operations.</p></div></div><span>{summary.rows.toLocaleString()} source rows</span></div><div className="grid-two">{distributions.slice(0, 4).map(([name, items]) => <section className="panel distribution-panel" key={name}><div className="panel-heading"><h2>{pretty(name)}</h2><span>Fraud rate by quantile</span></div>{items.map((item) => <div className="distribution-row" key={item.range}><span title={item.range}>{item.range}</span><b>{item.fraudRate.toFixed(2)}%</b><i><em style={{ width: `${Math.max(2, item.fraudRate * 5)}%` }} /></i><small>{item.count} records</small></div>)}</section>)}</div><div className="grid-two"><BarList title="Loan type cohort analysis" items={eda.byLoanType} /><BarList title="Employment cohort analysis" items={eda.byEmployment} /></div><section className="panel"><div className="panel-heading"><h2>Correlation with FraudFlag</h2><span>Numeric fields only</span></div><div className="correlation-list">{eda.correlations.map((item) => <div key={item.feature}><span>{pretty(item.feature)}</span><i><em className={item.value < 0 ? 'negative' : ''} style={{ width: `${Math.max(2, Math.abs(item.value) * 100)}%` }} /></i><b>{item.value.toFixed(4)}</b></div>)}</div></section></div>;
+function NotFound({ home }: { home: string }) {
+  return (
+    <div className="card">
+      <div className="state">
+        <h3>Page not found</h3>
+        <p>The page you requested does not exist or you do not have access to it.</p>
+        <button type="button" className="btn btn-primary" onClick={() => navigate(home)}>Go to dashboard</button>
+      </div>
+    </div>
+  );
 }
 
-function Curve({ points, xKey, yKey, title }: { points: Record<string, number>[]; xKey: string; yKey: string; title: string }) {
-  const path = points.map((point, index) => `${index ? 'L' : 'M'} ${(point[xKey] * 100).toFixed(1)} ${(100 - point[yKey] * 100).toFixed(1)}`).join(' ');
-  return <div className="curve"><h3>{title}</h3><svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M 0 100 L 100 0" className="baseline" /><path d={path} className="curve-line" /></svg><div className="axis"><span>0</span><span>False positive / recall</span><span>1</span></div></div>;
+function officerPage(route: Route) {
+  const [, section, id] = route.segments;
+  if (!section) return <AdminDashboard />;
+  if (section === 'new') return <ApplicationsPage mode="new" route={route} />;
+  if (section === 'applications' && id) return <ApplicationReview id={id} />;
+  if (section === 'applications') return <ApplicationsPage mode="all" route={route} />;
+  if (section === 'analytics') return <AnalyticsPage />;
+  if (section === 'checker') return <FraudCheckerPage />;
+  if (section === 'explorer') return <DataExplorerPage route={route} />;
+  if (section === 'settings') return <SettingsPage />;
+  if (section === 'model-lab') return <ModelLabPage />;
+  return <NotFound home="/admin" />;
 }
 
-function ModelsPage({ response }: { response: ModelResponse | null }) {
-  const [selected, setSelected] = useState('random_forest');
-  if (!response) return <div className="page-stack"><SectionTitle eyebrow="Model comparison" title="Model results are not available yet" description="Train the five models with python -m ml.train, then refresh this page. The frontend does not invent benchmark values." /><div className="empty-state"><FlaskConical size={32} /><p>No evaluation_results.json was found.</p></div></div>;
-  const metric = response.models[selected] || Object.values(response.models)[0];
-  return <div className="page-stack"><SectionTitle eyebrow="Measured model evaluation" title="Compare classifiers on the untouched test set" description="Metrics below are emitted by the training script. SMOTE is applied only inside the training pipeline after the stratified split." /><section className="panel table-wrap"><table><thead><tr><th>Algorithm</th><th>Accuracy</th><th>Precision</th><th>Recall</th><th>F1</th><th>ROC-AUC</th><th>PR-AUC</th></tr></thead><tbody>{Object.entries(response.models).map(([key, value]) => <tr className={key === selected ? 'selected' : ''} key={key} onClick={() => setSelected(key)}><td>{pretty(key)}</td><td>{percent(value.accuracy)}</td><td>{percent(value.precision)}</td><td>{percent(value.recall)}</td><td>{percent(value.f1)}</td><td>{value.rocAuc.toFixed(4)}</td><td>{value.prAuc.toFixed(4)}</td></tr>)}</tbody></table></section><div className="grid-two"><section className="panel"><div className="panel-heading"><h2>{pretty(selected)} confusion matrix</h2><span>Test records</span></div><div className="confusion"><div><small>True negative</small><b>{metric.confusionMatrix.tn}</b></div><div><small>False positive</small><b>{metric.confusionMatrix.fp}</b></div><div><small>False negative</small><b>{metric.confusionMatrix.fn}</b></div><div><small>True positive</small><b>{metric.confusionMatrix.tp}</b></div></div></section><section className="panel"><div className="panel-heading"><h2>Feature importance</h2><span>Global model signal</span></div><div className="importance-list">{metric.featureImportance.slice(0, 8).map((item) => <div key={item.feature}><span>{item.feature}</span><i><em style={{ width: `${Math.max(2, item.importance * 100)}%` }} /></i><b>{item.importance.toFixed(3)}</b></div>)}</div></section></div><section className="panel curves"><Curve title="ROC curve" points={metric.rocCurve} xKey="fpr" yKey="tpr" /><Curve title="Precision-recall curve" points={metric.precisionRecallCurve} xKey="recall" yKey="precision" /></section></div>;
+function technicalPage(route: Route) {
+  const [, section] = route.segments;
+  if (!section) return <TechDashboard />;
+  if (section === 'dataset') return <DatasetOverviewPage />;
+  if (section === 'explorer') return <DataExplorerPage route={route} canOpenApplication={false} />;
+  if (section === 'analytics') return <AnalyticsPage />;
+  if (section === 'models') return <ModelComparisonPage />;
+  if (section === 'performance') return <ModelPerformancePage route={route} />;
+  if (section === 'features') return <FeatureAnalysisPage />;
+  if (section === 'quality') return <DataQualityPage />;
+  if (section === 'olap') return <OlapPage />;
+  if (section === 'system') return <SystemPage />;
+  if (section === 'settings') return <TechSettingsPage />;
+  return <NotFound home="/technical" />;
 }
 
-const initialForm = { ApplicantAge: 30, Gender: 'Male', EmploymentStatus: 'Salaried', NumberDependents: 0, LoanType: 'Personal Loan', PurposeOfLoan: 'Education', LoanAmountRequested: 500000, LoanTenureMonths: 36, InterestRateOffered: 12, MonthlyIncome: 50000, ExistingEMIs: 10000, DebtToIncomeRatio: 20, PropertyOwnershipStatus: 'Rented', model_name: 'random_forest' };
-function PredictPage({ models }: { models: ModelResponse | null }) {
-  const [form, setForm] = useState(initialForm);
-  const [result, setResult] = useState<Prediction | null>(null);
-  const [error, setError] = useState('');
-  const update = (key: keyof typeof initialForm, value: string) => setForm((current) => ({ ...current, [key]: ['ApplicantAge', 'NumberDependents', 'LoanAmountRequested', 'LoanTenureMonths', 'InterestRateOffered', 'MonthlyIncome', 'ExistingEMIs', 'DebtToIncomeRatio'].includes(key) ? Number(value) : value }));
-  const submit = async (event: FormEvent) => { event.preventDefault(); setError(''); try { setResult(await postPrediction(form)); } catch (err) { setError(err instanceof Error ? err.message : 'Prediction service unavailable'); } };
-  const modelOptions = models ? Object.keys(models.models) : ['random_forest'];
-  return <div className="page-stack"><SectionTitle eyebrow="Inference" title="Predict fraud for one application" description="The form is sent to the saved preprocessing and model pipeline through FastAPI. Inputs match the actual training feature set." /><div className="prediction-layout"><form className="panel form-grid" onSubmit={submit}>{[['ApplicantAge','Age'],['NumberDependents','Dependents'],['LoanAmountRequested','Loan amount'],['LoanTenureMonths','Tenure months'],['InterestRateOffered','Interest rate'],['MonthlyIncome','Monthly income'],['ExistingEMIs','Existing EMIs'],['DebtToIncomeRatio','DTI (%)']].map(([key, label]) => <label key={key}>{label}<input type="number" value={form[key as keyof typeof form] as number} onChange={(event) => update(key as keyof typeof initialForm, event.target.value)} /></label>)}<label>Gender<select value={form.Gender} onChange={(event) => update('Gender', event.target.value)}><option>Male</option><option>Female</option><option>Other</option></select></label><label>Employment<select value={form.EmploymentStatus} onChange={(event) => update('EmploymentStatus', event.target.value)}><option>Salaried</option><option>Self-Employed</option><option>Business Owner</option><option>Student</option><option>Retired</option><option>Unemployed</option></select></label><label>Loan type<select value={form.LoanType} onChange={(event) => update('LoanType', event.target.value)}><option>Personal Loan</option><option>Home Loan</option><option>Car Loan</option><option>Business Loan</option><option>Education Loan</option></select></label><label>Property ownership<select value={form.PropertyOwnershipStatus} onChange={(event) => update('PropertyOwnershipStatus', event.target.value)}><option>Rented</option><option>Owned</option><option>Jointly Owned</option></select></label><label>Purpose<input value={form.PurposeOfLoan} onChange={(event) => update('PurposeOfLoan', event.target.value)} /></label><label>Model<select value={form.model_name} onChange={(event) => update('model_name', event.target.value)}>{modelOptions.map((option) => <option key={option}>{option}</option>)}</select></label><button className="primary-button" type="submit">Run model prediction</button>{error && <p className="error-text">{error}</p>}</form><section className="panel result-panel">{result ? <><span className="eyebrow">Model output</span><strong className={result.prediction ? 'risk' : 'safe'}>{(result.fraudProbability * 100).toFixed(2)}%</strong><h2>{result.classification}</h2><p>Probability returned by the {pretty(result.model)} pipeline.</p><h3>Global feature importance</h3>{result.featureImportance.map((item) => <div className="importance-row" key={item.feature}><span>{item.feature}</span><b>{item.importance.toFixed(3)}</b></div>)}</> : <div className="empty-state"><ShieldCheck size={32} /><p>Submit an application to receive a model-backed probability.</p></div>}</section></div></div>;
+function customerPage(route: Route) {
+  const [, section, id] = route.segments;
+  if (!section) return <CustomerDashboard />;
+  if (section === 'apply') return <ApplyPage />;
+  if (section === 'applications' && id) return <CustomerApplicationDetail id={id} />;
+  if (section === 'applications') return <MyApplicationsPage />;
+  return <NotFound home="/customer" />;
 }
 
-function RecordsPage() {
-  const [page, setPage] = useState(1); const [search, setSearch] = useState(''); const [fraud, setFraud] = useState('all'); const [data, setData] = useState<{ total: number; records: RecordRow[] }>({ total: 0, records: [] });
-  useEffect(() => { getRecords(page, search, fraud, 'all', 'all').then(setData).catch(() => setData({ total: 0, records: [] })); }, [page, search, fraud]);
-  const columns = ['ApplicationID', 'ApplicantName', 'LoanType', 'EmploymentStatus', 'LoanAmountRequested', 'DebtToIncomeRatio', 'FraudFlag', 'LoanStatus'];
-  return <div className="page-stack"><SectionTitle eyebrow="Source records" title="Inspect the dataset" description="A small searchable window into the records used by the analytics and training pipeline." /><section className="panel"><div className="record-controls"><label className="search-field"><Search size={16} /><input placeholder="Search application, customer, or applicant" value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} /></label><select value={fraud} onChange={(event) => { setPage(1); setFraud(event.target.value); }}><option value="all">All labels</option><option value="0">Genuine</option><option value="1">Fraud</option></select><span>{data.total.toLocaleString()} matching records</span></div><div className="table-wrap"><table><thead><tr>{columns.map((column) => <th key={column}>{pretty(column)}</th>)}</tr></thead><tbody>{data.records.map((row, index) => <tr key={`${row.ApplicationID}-${index}`}>{columns.map((column) => <td key={column}>{column === 'LoanAmountRequested' ? money(Number(row[column])) : String(row[column] ?? '')}</td>)}</tr>)}</tbody></table></div><div className="pagination"><button disabled={page === 1} onClick={() => setPage((current) => current - 1)}>Previous</button><span>Page {page}</span><button disabled={data.records.length < 20} onClick={() => setPage((current) => current + 1)}>Next</button></div></section></div>;
+function Router() {
+  const route = useRoute();
+  const { user, checking } = useAuth();
+  const area = route.segments[0];
+  const home = HOME[user?.role ?? 'customer'] ?? '/customer';
+
+  // Route protection: signed-out users go to login; each role only sees its own area.
+  useEffect(() => {
+    if (checking) return;
+    const publicArea = area === 'login' || area === 'signup' || area === 'admin-login';
+    const ownArea = { officer: 'admin', customer: 'customer', admin: 'technical' }[user?.role ?? 'customer'];
+    if (!user && !publicArea) {
+      const next = route.path !== '/' ? `?next=${encodeURIComponent(route.path)}` : '';
+      navigate(`${area === 'technical' ? '/admin-login' : '/login'}${next}`, { replace: true });
+    } else if (user && (publicArea || !area)) {
+      navigate(home, { replace: true });
+    } else if (user && ['admin', 'customer', 'technical'].includes(area) && area !== ownArea) {
+      // A signed-in user who opens another role's area is sent back to their own.
+      navigate(home, { replace: true });
+    }
+  }, [user, checking, area, route.path, home]);
+
+  if (checking) return <LoadingState label="Checking your session…" />;
+  if (!user) {
+    if (area === 'signup') return <SignupPage />;
+    if (area === 'login') return <LoginPage route={route} />;
+    if (area === 'admin-login') return <LoginPage route={route} mode="admin" />;
+    return <LoadingState label="Redirecting to sign in…" />;
+  }
+  if (user.role === 'officer' && area === 'admin') {
+    return (
+      <StatsProvider route={route}>
+        <Shell route={route}>{officerPage(route)}</Shell>
+      </StatsProvider>
+    );
+  }
+  if (user.role === 'admin' && area === 'technical') {
+    return <Shell route={route}>{technicalPage(route)}</Shell>;
+  }
+  if (user.role === 'customer' && area === 'customer') {
+    return <Shell route={route}>{customerPage(route)}</Shell>;
+  }
+  return <LoadingState label="Redirecting…" />;
 }
 
 export default function App() {
-  const [page, setPage] = useState<Page>('overview'); const [menuOpen, setMenuOpen] = useState(false); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
-  const [summary, setSummary] = useState<DatasetSummary | null>(null); const [overview, setOverview] = useState<Overview | null>(null); const [eda, setEda] = useState<EdaResponse | null>(null); const [models, setModels] = useState<ModelResponse | null>(null);
-  const load = () => { setLoading(true); setError(''); Promise.all([getDatasetSummary(), getOverview(), getEda(), getModels().catch(() => null)]).then(([nextSummary, nextOverview, nextEda, nextModels]) => { setSummary(nextSummary); setOverview(nextOverview); setEda(nextEda); setModels(nextModels); }).catch((err) => setError(err instanceof Error ? err.message : 'FastAPI is unavailable.')).finally(() => setLoading(false)); };
-  useEffect(load, []);
-  const current = useMemo(() => pages.find((item) => item.id === page), [page]);
-  return <div className="app-shell"><header className="topbar"><button className="menu-button" onClick={() => setMenuOpen((open) => !open)} aria-label="Open navigation"><Menu size={20} /></button><div className="brand"><span className="brand-mark"><Database size={20} /></span><div><strong>Financial Fraud Analytics</strong><small>Academic data mining system</small></div></div><div className="topbar-meta"><span className="status-dot" />{summary ? `${summary.rows.toLocaleString()} records loaded` : 'Connecting to analysis API'}<button className="icon-button" onClick={load} title="Refresh data"><RefreshCw size={16} /></button></div></header><div className="layout"><aside className={menuOpen ? 'sidebar open' : 'sidebar'}><nav>{pages.map(({ id, label, icon: Icon }) => <button className={page === id ? 'nav-item active' : 'nav-item'} key={id} onClick={() => { setPage(id); setMenuOpen(false); }}><Icon size={17} /><span>{label}</span></button>)}</nav><div className="sidebar-foot"><span>Source of truth</span><b>FastAPI + saved models</b></div></aside><main>{loading ? <div className="loading"><RefreshCw className="spin" /><p>Loading dataset analyses...</p></div> : error ? <div className="empty-state error-box"><Database size={32} /><h2>Analysis API unavailable</h2><p>{error}</p><p>Start it with <code>uvicorn backend.main:app --reload --port 8000</code>.</p><button className="primary-button" onClick={load}>Retry</button></div> : summary && overview && eda ? <>{current && <div className="breadcrumb">Project / {current.label}</div>}{page === 'overview' && <OverviewPage overview={overview} summary={summary} />}{page === 'analysis' && <AnalysisPage eda={eda} summary={summary} />}{page === 'models' && <ModelsPage response={models} />}{page === 'predict' && <PredictPage models={models} />}{page === 'records' && <RecordsPage />}</> : null}</main></div></div>;
+  return (
+    <ToastProvider>
+      <AuthProvider>
+        <Router />
+      </AuthProvider>
+    </ToastProvider>
+  );
 }
